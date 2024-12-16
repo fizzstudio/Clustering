@@ -1,12 +1,12 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 //var s1 = require('./s1.js')
 //console.log(s1.data);
-var clustering = require('density-clustering');
+var clustering = require('./node_modules/density-clustering');
 var csv2json = require('csvjson-csv2json');
 const data = csv2json(get());
 
 let dataArray = [];
-for (let i = 0; i < 5000; i++) {
+for (let i = 0; i < data.length; i++) {
   dataArray.push([data[i]["x"], data[i]["y"]])
 }
 
@@ -45,20 +45,21 @@ const NNcanvas = document.getElementById("NNCanvas");
     
 
 let minPts = 4;
-
+/*
 var dbscan = new clustering.DBSCAN();
-//var clusters = dbscan.run(dataArray, 2*distAvg[minPts], minPts);
 var clusters = dbscan.run(dataArray, 2*distAvg[minPts], minPts);
 console.log(clusters, dbscan.noise);
 console.log(clusters.length);
 
-
-/*
 var optics = new clustering.OPTICS();
 var clusters = optics.run(dataArray, 4000, minPts);
 var plot = optics.getReachabilityPlot();
 console.log(clusters, plot);
 */
+var fizzscan = new clustering.FIZZSCAN();
+var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
+console.log(clusters, fizzscan.noise);
+console.log(clusters.length);
 
 
 const canvas = document.getElementById("myCanvas");
@@ -89,9 +90,9 @@ const canvas = document.getElementById("myCanvas");
         }
       }
       
-      if (dbscan.noise.includes(i)){
+      if (fizzscan.noise.includes(i)){
         ctx.fillStyle = "gray";
-        ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(x, y, 4, 4, 0, 0, Math.PI * 2);
         ctx.fill();
       }
       
@@ -3038,7 +3039,6 @@ function get(){
 257134,845851
 187314,815820
 294275,174786
-329428,
 325938,164475
 253129,154296
 319838,170383
@@ -3053,11 +3053,9 @@ function get(){
 291170,110147
 321522,163852
 202627,179376
-307913,
 311093,169734
 321775,164846
 294832,124284
-295537,
 383044,180418
 338570,192256
 337894,175289
@@ -3072,19 +3070,16 @@ function get(){
 287966,150135
 346942,152780
 232784,169847
-292492,
 334529,166765
 363208,238649
 196795,190277
 353333,113156
-373191,
 333789,151168
 339732,163158
 321822,187102
 276792,141848
 308044,164482
 311328,159477
-383052,
 316820,150304
 314479,178821
 310824,144943
@@ -3108,12 +3103,9 @@ function get(){
 330533,214555
 320400,160020
 267662,127175
-396583,
 292193,125417
-324121,
 321344,166633
 234837,151054
-368060,
 347050,150472
 245783,109229
 400550,144359
@@ -3182,7 +3174,6 @@ function get(){
 390934,170420
 358562,112650
 355499,224982
-363437,
 232043,177614
 246753,175170
 327204,152871
@@ -3226,11 +3217,9 @@ function get(){
 378347,144880
 322789,137560
 328425,159826
-341137,
 317771,154916
 336266,148507
 342066,119083
-297177,
 280519,165350
 305901,166656
 284757,175853
@@ -3243,7 +3232,6 @@ function get(){
 278116,185472
 247892,115217
 306326,164202
-311516,
 323747,163351
 321778,158339
 309501,166931
@@ -3311,7 +3299,6 @@ function get(){
 283571,109326
 308748,199866
 369490,164369
-270729,
 279010,181792
 282957,179982
 308489,145929
@@ -3324,7 +3311,6 @@ function get(){
 268518,181514
 285865,167818
 279251,184486
-306042,
 318215,180010
 293978,197091
 338044,233264
@@ -3334,7 +3320,6 @@ function get(){
 248779,111087
 313783,177198
 415534,110526
-296164,
 315670,160928
 339137,160334
 290700,196285
@@ -3350,14 +3335,12 @@ function get(){
 335003,151395
 267212,158699
 343851,193618
-296627,
 334980,143900
 335235,180161
 360945,167952
 257841,193878
 275288,212315
 331798,143962
-333937,
 328775,156501
 319829,168353
 293201,192871
@@ -3366,7 +3349,6 @@ function get(){
 348815,150017
 312227,159417
 324337,162686
-323329,
 291973,127483
 258779,106777
 325360,134919
@@ -3386,7 +3368,6 @@ function get(){
 102460,533057
 185935,554627
 123441,594415
-,
 110948,539533
 101553,517715
 133023,574572
@@ -3396,12 +3377,9 @@ function get(){
 179189,536028
 141238,557986
 156430,615117
-,
-,
 144620,575370
 155899,561715
 137451,555339
-,
 166290,521714
 210499,526471
 148319,584541
@@ -3410,17 +3388,14 @@ function get(){
 136301,569544
 119386,620549
 139212,557713
-,
 176602,574552
 105945,528795
 140989,537156
 138449,555969
 128669,574591
-,
 139460,557260
 130440,562623
 147885,527813
-,
 151701,574146
 148385,538149
 142668,544976
@@ -3438,10 +3413,8 @@ function get(){
 137347,622867
 139146,569516
 125756,579609
-,
 138073,556272
 202547,601240
-,
 118137,579149
 201324,574588
 113259,568684
@@ -3452,7 +3425,6 @@ function get(){
 220156,589643
 137787,566189
 138122,557230
-,
 154620,576738
 131523,568207
 136967,565662
@@ -3466,13 +3438,11 @@ function get(){
 136078,547418
 140164,531093
 156003,502860
-,
 133780,533275
 116142,550919
 148510,579793
 179224,584189
 149906,546909
-,
 115287,602637
 206561,574789
 108651,521409
@@ -3493,8 +3463,6 @@ function get(){
 104862,608089
 158366,537970
 138525,534268
-,
-,
 153185,562792
 147599,513563
 223226,546198
@@ -3518,7 +3486,6 @@ function get(){
 183026,545377
 152658,569277
 172116,513383
-,
 144325,538991
 166597,572855
 105193,596017
@@ -3552,17 +3519,13 @@ function get(){
 129030,588495
 155430,549012
 172756,612694
-,
-,
 148080,544056
 169322,577938
 173847,514665
 136418,562926
 140047,540043
-,
 146681,562995
 110877,562558
-,
 136232,576477
 146120,576624
 259173,548593
@@ -3571,16 +3534,13 @@ function get(){
 158283,570550
 206219,604081
 116492,509399
-,
 193275,538687
 116860,550810
 179834,541387
 143226,522375
 111174,539350
-,
 139434,557410
 131532,536658
-,
 113321,606322
 123905,508486
 201753,569116
@@ -3588,7 +3548,6 @@ function get(){
 138884,529162
 139636,565984
 110479,594587
-,
 160280,493497
 161475,587507
 149054,556986
@@ -3599,7 +3558,6 @@ function get(){
 161154,538355
 130157,581286
 142000,554964
-,
 130883,557824
 127964,538935
 122130,568886
@@ -3610,7 +3568,6 @@ function get(){
 130657,555545
 165382,518876
 221994,575146
-,
 154268,542573
 197367,535989
 133094,557996
@@ -3637,9 +3594,6 @@ function get(){
 134725,537440
 127940,590467
 143592,606949
-,
-,
-,
 103192,550021
 198823,538624
 145758,562414
@@ -3650,16 +3604,11 @@ function get(){
 142767,538646
 143912,595772
 184412,537050
-,
 137197,556522
 138461,558771
-,
 203667,577260
-,
 145244,561042
-,
 130201,562734
-,
 134422,544300
 141771,551655
 141924,558399
@@ -3671,9 +3620,7 @@ function get(){
 170494,560892
 164453,544085
 128788,546091
-,
 131109,568012
-,
 232047,522748
 125548,552424
 142563,560090
@@ -3681,8 +3628,6 @@ function get(){
 132497,593125
 162713,586568
 122296,566921
-,
-,
 104489,542515
 130582,565948
 180633,570302
@@ -3699,11 +3644,9 @@ function get(){
 105353,589239
 119496,543146
 142575,517378
-,
 137699,556769
 154964,554923
 142516,559062
-,
 163925,576666
 153326,558408
 262846,559590
@@ -3712,7 +3655,6 @@ function get(){
 193502,557364
 202175,495076
 154162,536416
-,
 163477,561507
 131874,552586
 120357,560737
@@ -3723,7 +3665,6 @@ function get(){
 233105,591646
 149760,577278
 139237,548782
-,
 147663,555514
 108512,525986
 509279,180548
@@ -3750,7 +3691,6 @@ function get(){
 517750,199025
 520952,169184
 559076,190770
-416763,
 549384,208450
 549147,171454
 520880,200955
@@ -3837,7 +3777,6 @@ function get(){
 491382,122267
 457033,127590
 535453,200970
-436641,
 520845,176291
 496130,178113
 507473,227670
@@ -3881,7 +3820,6 @@ function get(){
 474527,107596
 499643,171625
 514722,190943
-474641,
 495995,160032
 516963,174184
 521006,163218
@@ -3943,7 +3881,6 @@ function get(){
 507741,178883
 486224,196184
 509039,173839
-462658,
 519680,208378
 499676,196897
 480876,160465
@@ -5131,7 +5068,7 @@ function get(){
 
 
 
-},{"csvjson-csv2json":2,"density-clustering":7}],2:[function(require,module,exports){
+},{"./node_modules/density-clustering":8,"csvjson-csv2json":2}],2:[function(require,module,exports){
 (function() {
   /**
    *
@@ -6317,6 +6254,304 @@ if (typeof module !== 'undefined' && module.exports) {
 
 },{}],4:[function(require,module,exports){
 /**
+ * DBSCAN - Density based clustering
+ *
+ * @author Lukasz Krawczyk <contact@lukaszkrawczyk.eu>
+ * @copyright MIT
+ */
+
+/**
+ * FIZZSCAN class construcotr
+ * @constructor
+ *
+ * @param {Array} dataset
+ * @param {number} epsilon
+ * @param {number} minPts
+ * @param {function} distanceFunction
+ * @returns {FIZZSCAN}
+ */
+function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
+    /** @type {Array} */
+    this.dataset = [];
+    /** @type {number} */
+    this.epsilon = 1;
+    /** @type {number} */
+    this.minPts = 2;
+    /** @type {function} */
+    this.distance = this._euclideanDistance;
+    /** @type {boolean} */
+    this.forceIn = false;
+    /** @type {Array} */
+    this.clusters = [];
+    /** @type {Array} */
+    this.clusterCentroids = [];
+    /** @type {Array} */
+    this.noise = [];
+  
+    // temporary variables used during computation
+  
+    /** @type {Array} */
+    this._visited = [];
+    /** @type {Array} */
+    this._assigned = [];
+    /** @type {number} */
+    this._datasetLength = 0;
+  
+    this._init(dataset, epsilon, minPts, forceIn, distanceFunction);
+  };
+  
+  /******************************************************************************/
+  // public functions
+  
+  /**
+   * Start clustering
+   *
+   * @param {Array} dataset
+   * @param {number} epsilon
+   * @param {number} minPts
+   * @param {function} distanceFunction
+   * @param {boolean} distanceFunction
+   * @returns {undefined}
+   * @access public
+   */
+  FIZZSCAN.prototype.run = function(dataset, epsilon, minPts, forceIn, distanceFunction) {
+    this._init(dataset, epsilon, minPts, forceIn, distanceFunction);
+  
+    for (var pointId = 0; pointId < this._datasetLength; pointId++) {
+      // if point is not visited, check if it forms a cluster
+      if (this._visited[pointId] !== 1) {
+        this._visited[pointId] = 1;
+  
+        // if closest neighborhood is too small to form a cluster, mark as noise
+        var neighbors = this._regionQuery(pointId);
+  
+        if (neighbors.length < this.minPts) {
+          this.noise.push(pointId);
+        } else {
+          // create new cluster and add point
+          var clusterId = this.clusters.length;
+          this.clusters.push([]);
+          this._addToCluster(pointId, clusterId);
+  
+          this._expandCluster(clusterId, neighbors);
+        }
+      }
+    }
+
+    //Optionally forces clustering of noise/outlier points by distance to nearest centroid
+    if (this.forceIn){
+      for (var pointId = 0; pointId < this.noise.length; pointId++) {
+        var dist = 0;
+        var nearestClusterId = 0;
+        for (var clusterId = 0; clusterId < this.clusterCentroids.length; clusterId++) {
+          var testDist = this.distance(pointId, this.clusterCentroids[clusterId])
+          if (dist = 0){
+            dist = testDist;
+            nearestClusterId = clusterId;
+          }
+          else{
+            if (dist>testDist){
+              dist = testDist;
+              nearestClusterId = clusterId;
+            }
+          }
+        }
+        this._addToCluster(pointId,clusterId);
+      }
+      this.noise = [];
+    }
+
+    
+    return this.clusters;
+  };
+  
+  /******************************************************************************/
+  // protected functions
+  
+  /**
+   * Set object properties
+   *
+   * @param {Array} dataset
+   * @param {number} epsilon
+   * @param {number} minPts
+   * @param {function} distance
+   * @param {boolean} forceIn
+   * @returns {undefined}
+   * @access protected
+   */
+  FIZZSCAN.prototype._init = function(dataset, epsilon, minPts, forceIn, distance) {
+  
+    if (dataset) {
+  
+      if (!(dataset instanceof Array)) {
+        throw Error('Dataset must be of type array, ' +
+          typeof dataset + ' given');
+      }
+  
+      this.dataset = dataset;
+      this.clusters = [];
+      this.noise = [];
+  
+      this._datasetLength = dataset.length;
+      this._visited = new Array(this._datasetLength);
+      this._assigned = new Array(this._datasetLength);
+    }
+  
+    if (epsilon) {
+      this.epsilon = epsilon;
+    }
+  
+    if (minPts) {
+      this.minPts = minPts;
+    }
+  
+    if (distance) {
+      this.distance = distance;
+    }
+
+    if (forceIn) {
+      this.forceIn = forceIn;
+    }
+  };
+  
+  /**
+   * Expand cluster to closest points of given neighborhood
+   *
+   * @param {number} clusterId
+   * @param {Array} neighbors
+   * @returns {undefined}
+   * @access protected
+   */
+  FIZZSCAN.prototype._expandCluster = function(clusterId, neighbors) {
+  
+    /**
+     * It's very important to calculate length of neighbors array each time,
+     * as the number of elements changes over time
+     */
+    for (var i = 0; i < neighbors.length; i++) {
+      var pointId2 = neighbors[i];
+  
+      if (this._visited[pointId2] !== 1) {
+        this._visited[pointId2] = 1;
+        var neighbors2 = this._regionQuery(pointId2);
+  
+        if (neighbors2.length >= this.minPts) {
+          neighbors = this._mergeArrays(neighbors, neighbors2);
+        }
+      }
+  
+      // add to cluster
+      if (this._assigned[pointId2] !== 1) {
+        this._addToCluster(pointId2, clusterId);
+      }
+    }
+  };
+  
+  /**
+   * Add new point to cluster
+   *
+   * @param {number} pointId
+   * @param {number} clusterId
+   */
+  FIZZSCAN.prototype._addToCluster = function(pointId, clusterId) {
+    this.clusters[clusterId].push(pointId);
+    this._assigned[pointId] = 1;
+  };
+  
+  /**
+   * Find all neighbors around given point
+   *
+   * @param {number} pointId,
+   * @param {number} epsilon
+   * @returns {Array}
+   * @access protected
+   */
+  FIZZSCAN.prototype._regionQuery = function(pointId) {
+    var neighbors = [];
+  
+    for (var id = 0; id < this._datasetLength; id++) {
+      var dist = this.distance(this.dataset[pointId], this.dataset[id]);
+      if (dist < this.epsilon) {
+        neighbors.push(id);
+      }
+    }
+  
+    return neighbors;
+  };
+  
+  /******************************************************************************/
+  // helpers
+  
+  /**
+   * @param {Array} a
+   * @param {Array} b
+   * @returns {Array}
+   * @access protected
+   */
+  FIZZSCAN.prototype._mergeArrays = function(a, b) {
+    var len = b.length;
+  
+    for (var i = 0; i < len; i++) {
+      var P = b[i];
+      if (a.indexOf(P) < 0) {
+        a.push(P);
+      }
+    }
+  
+    return a;
+  };
+  
+  /**
+   * Calculate euclidean distance in multidimensional space
+   *
+   * @param {Array} p
+   * @param {Array} q
+   * @returns {number}
+   * @access protected
+   */
+  FIZZSCAN.prototype._euclideanDistance = function(p, q) {
+    var sum = 0;
+    var i = Math.min(p.length, q.length);
+  
+    while (i--) {
+      sum += (p[i] - q[i]) * (p[i] - q[i]);
+    }
+  
+    return Math.sqrt(sum);
+  };
+  
+  /**
+   * Calculate centroid of a group of points
+   *
+   * @param {Array} c
+   * @returns {Array}
+   * @access protected
+   */
+  FIZZSCAN.prototype._centroid = function(c) {
+    var centroid = [];
+    var i = 0;
+    var j = 0;
+    var l = c.length;
+    for (i = 0; i< l; i++){
+        for (j = 0; j< c[i].length; j++){
+            if (centroid[j] !== undefined){
+                centroid[j] += c[i][j]/l;
+            }
+            else{
+                centroid.push(0);
+                centroid[j] += c[i][j]/l;
+            }
+        }
+    }
+    return centroid;
+  }
+
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = FIZZSCAN;
+  }
+},{}],5:[function(require,module,exports){
+/**
  * KMEANS clustering
  *
  * @author Lukasz Krawczyk <contact@lukaszkrawczyk.eu>
@@ -6530,7 +6765,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = KMEANS;
 }
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 
 /**
  * @requires ./PriorityQueue.js
@@ -6801,7 +7036,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = OPTICS;
 }
 
-},{"./PriorityQueue.js":6}],6:[function(require,module,exports){
+},{"./PriorityQueue.js":7}],7:[function(require,module,exports){
 /**
  * PriorityQueue
  * Elements in this queue are sorted according to their value
@@ -6983,15 +7218,16 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = PriorityQueue;
 }
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
       DBSCAN: require('./DBSCAN.js'),
       KMEANS: require('./KMEANS.js'),
       OPTICS: require('./OPTICS.js'),
-      PriorityQueue: require('./PriorityQueue.js')
+      PriorityQueue: require('./PriorityQueue.js'),
+      FIZZSCAN: require('./FIZZSCAN.js')
     };
 }
 
-},{"./DBSCAN.js":3,"./KMEANS.js":4,"./OPTICS.js":5,"./PriorityQueue.js":6}]},{},[1]);
+},{"./DBSCAN.js":3,"./FIZZSCAN.js":4,"./KMEANS.js":5,"./OPTICS.js":6,"./PriorityQueue.js":7}]},{},[1]);
