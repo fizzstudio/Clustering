@@ -26,7 +26,7 @@ distAvg.push(sum)
 
 distAvg = distAvg.map((x) => x / dataArray.length)
 console.log(distAvg);
-
+/*
 const NNcanvas = document.getElementById("NNCanvas");
     const NNctx = NNcanvas.getContext("2d");
     let dist = distAvg;
@@ -42,7 +42,7 @@ const NNcanvas = document.getElementById("NNCanvas");
       NNctx.fill();
       //console.log(i, dist[i]);
     }
-    
+*/    
 
 let minPts = 4;
 /*
@@ -6340,23 +6340,33 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
 
     //Optionally forces clustering of noise/outlier points by distance to nearest centroid
     if (this.forceIn){
+      for (var i = 0; i< this.clusters.length; i++){
+        //console.log(this.clusters[i]);
+        //console.log(this._centroid(this.clusters[i]))
+        this.clusterCentroids.push(this._centroid(this.clusters[i]));
+      }
+      console.log("sneed");
+      console.log(this.clusterCentroids);
+      console.log("chuck");
       for (var pointId = 0; pointId < this.noise.length; pointId++) {
         var dist = 0;
         var nearestClusterId = 0;
         for (var clusterId = 0; clusterId < this.clusterCentroids.length; clusterId++) {
           var testDist = this.distance(pointId, this.clusterCentroids[clusterId])
-          if (dist = 0){
+          if (dist == 0){
+            console.log("test1");
             dist = testDist;
             nearestClusterId = clusterId;
           }
           else{
             if (dist>testDist){
+              console.log("test2")
               dist = testDist;
               nearestClusterId = clusterId;
             }
           }
         }
-        this._addToCluster(pointId,clusterId);
+        this._addToCluster(this.dataset.indexOf(this.dataset[this.noise[pointId]]),nearestClusterId);
       }
       this.noise = [];
     }
@@ -6532,14 +6542,18 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
     var i = 0;
     var j = 0;
     var l = c.length;
+    var points = [];
     for (i = 0; i< l; i++){
-        for (j = 0; j< c[i].length; j++){
+      points.push(this.dataset[c[i]])
+    }
+    for (i = 0; i< l; i++){
+        for (j = 0; j< points[i].length; j++){
             if (centroid[j] !== undefined){
-                centroid[j] += c[i][j]/l;
+                centroid[j] += points[i][j]/l;
             }
             else{
                 centroid.push(0);
-                centroid[j] += c[i][j]/l;
+                centroid[j] += points[i][j]/l;
             }
         }
     }

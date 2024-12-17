@@ -25,7 +25,7 @@ distAvg.push(sum)
 
 distAvg = distAvg.map((x) => x / dataArray.length)
 console.log(distAvg);
-
+/*
 const NNcanvas = document.getElementById("NNCanvas");
     const NNctx = NNcanvas.getContext("2d");
     let dist = distAvg;
@@ -41,7 +41,7 @@ const NNcanvas = document.getElementById("NNCanvas");
       NNctx.fill();
       //console.log(i, dist[i]);
     }
-    
+*/    
 
 let minPts = 4;
 /*
