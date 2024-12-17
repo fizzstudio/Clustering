@@ -3,6 +3,9 @@
 //console.log(s1.data);
 var clustering = require('./node_modules/density-clustering');
 var csv2json = require('csvjson-csv2json');
+const silhouette = require('@robzzson/silhouette');
+
+
 const data = csv2json(get());
 
 let dataArray = [];
@@ -23,9 +26,8 @@ for (let i = 0; i < dataArray.length; i++) {
 }
 distAvg.push(sum)
 }
-
 distAvg = distAvg.map((x) => x / dataArray.length)
-console.log(distAvg);
+
 /*
 const NNcanvas = document.getElementById("NNCanvas");
     const NNctx = NNcanvas.getContext("2d");
@@ -59,7 +61,53 @@ console.log(clusters, plot);
 var fizzscan = new clustering.FIZZSCAN();
 var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
 console.log(clusters, fizzscan.noise);
-console.log(clusters.length);
+console.log(`Number of clusters: ${clusters.length}`)
+
+
+
+console.log(dataArray);
+var datasetCentroid = getCentroid(dataArray);
+
+
+
+var BCSS = 0;
+var WCSS = 0;
+for (var i = 0; i < clusters.length; i++){
+  var clusteredData = [];
+  for (var j = 0; j < clusters[i].length; j++){
+    clusteredData.push(dataArray[clusters[i][j]])
+  }
+  BCSS += clusteredData.length * euclidDistance(getCentroid(clusteredData), datasetCentroid);
+}
+for (var i = 0; i < clusters.length; i++){
+  var clusteredData = [];
+  for (var j = 0; j < clusters[i].length; j++){
+    clusteredData.push(dataArray[clusters[i][j]])
+  }
+  for (var j = 0; j < clusteredData.length; j++){
+    WCSS += euclidDistance(clusteredData[j], getCentroid(clusteredData));
+  }
+  
+}
+CHI = BCSS*(dataArray.length-clusters.length)/(WCSS*(clusters.length-1))
+console.log(`Calinski–Harabasz_index: ${CHI}`)
+
+
+var silhouetteLabels = [];
+for (var i = 0; i < dataArray.length; i++){
+  silhouetteLabels.push(0);
+}
+for (var i = 0; i < clusters.length; i++){
+  //console.log(i);
+  for (var j = 0; j < clusters[i].length; j++){
+    //console.log(j);
+    silhouetteLabels[clusters[i][j]] = i;
+  }
+}
+let silhouetteScore = silhouette(dataArray, silhouetteLabels);
+console.log(`Calinski–Harabasz_index: ${silhouetteScore}`);
+
+
 
 
 const canvas = document.getElementById("myCanvas");
@@ -123,6 +171,25 @@ function nNDistances(dataset, pointId) {
   //return distances.sort().slice(0, minPts);
 };
 
+function getCentroid(c) {
+  var centroid = [];
+  var i = 0;
+  var j = 0;
+  var l = c.length;
+
+  for (i = 0; i< l; i++){
+      for (j = 0; j< c[i].length; j++){
+          if (centroid[j] !== undefined){
+              centroid[j] += c[i][j]/l;
+          }
+          else{
+              centroid.push(0);
+              centroid[j] += c[i][j]/l;
+          }
+      }
+  }
+  return centroid;
+}
 
 function get(){
   let data = `x,y
@@ -5068,7 +5135,106 @@ function get(){
 
 
 
-},{"./node_modules/density-clustering":8,"csvjson-csv2json":2}],2:[function(require,module,exports){
+},{"./node_modules/density-clustering":9,"@robzzson/silhouette":2,"csvjson-csv2json":3}],2:[function(require,module,exports){
+'use strict';
+
+function _interopDefault (ex) { return (ex && (typeof ex === 'object') && 'default' in ex) ? ex['default'] : ex; }
+
+var mlDistanceEuclidean = require('ml-distance-euclidean');
+var distanceMatrix = _interopDefault(require('ml-distance-matrix'));
+
+/**
+ * Calculate Silhouette Coefficient
+ * @param {Array<Array<number>>} data - list of input data samples
+ * @param {Array<number>} labels - label values for each sample
+ * @returns {number} score - Silhouette Score for input clustering
+ */
+function silhouetteScore(data, labels) {
+  /*
+	TODO: Check X and Y for consistent length - enforce X to be 2D and Y 1D.
+		The length of Y should equal the number of rows in X, which in turn
+		should be non-empty and should contain only finite values - no NaN-s
+		and Inf-s allowed. The same goes for Y. Check that number of labels
+		(number of distinct values in Y) is valid. Valid values are from 2 to
+		data.length - 1 (inclusive)".
+ 	*/
+  let dist = distanceMatrix(data, mlDistanceEuclidean.euclidean);
+  let result = silhouetteSamples(dist, labels, silhouetteReduce);
+  return result.reduce((p, c, i) => p + (c - p) / (i + 1), 0);
+}
+
+/**
+ * Calculate Silhouette for each data sample
+ * @param {Array<Array<number>>} data - list of input data samples
+ * @param {Array<number>} labels - label values for each sample
+ * @param {Function|Mock} reduceFunction - reduce function to apply on samples
+ * @returns {Array<number>} arr - Silhouette Coefficient for each sample
+ */
+function silhouetteSamples(data, labels, reduceFunction) {
+  /*
+	TODO: Check X and Y for consistent length - enforce X to be 2D and Y 1D.
+		The length of Y should equal the number of rows in X, which in turn
+		should be non-empty and should contain only finite values - no NaN-s
+		and Inf-s allowed. The same goes for Y. Check that number of labels
+		(number of distinct values in Y) is valid. Valid values are from 2 to
+		data.length - 1 (inclusive)".
+	 */
+  let labelsFreq = countBy(labels);
+  let samples = reduceFunction(data, labels, labelsFreq);
+  let denom = labels.map((val) => labelsFreq[val] - 1);
+  let intra = samples.intraDist.map((val, ind) => val / denom[ind]);
+  let inter = samples.interDist;
+  return inter
+    .map((val, ind) => val - intra[ind])
+    .map((val, ind) => val / Math.max(intra[ind], inter[ind]));
+}
+
+/**
+ * Count the number of occurrences of each value in array.
+ * @param {Array<number>} arr - Array of positive Integer values
+ * @return {Array<number>} out - number of occurrences of each value starting from
+ * 0 to max(arr).
+ */
+function countBy(arr) {
+  let valid = arr.every((val) => {
+    if (typeof val !== 'number') return false;
+    return val >= 0.0 && Math.floor(val) === val && val !== Infinity;
+  });
+  if (!valid) throw new Error('Array must contain only natural numbers');
+
+  let out = Array.from({ length: Math.max(...arr) + 1 }, () => 0);
+  arr.forEach((value) => {
+    out[value]++;
+  });
+  return out;
+}
+
+function silhouetteReduce(dataChunk, labels, labelFrequencies) {
+  let clusterDistances = dataChunk.map((row) =>
+    labelFrequencies.map((_, mInd) =>
+      labels.reduce(
+        (acc, val, rInd) => (val === mInd ? acc + row[rInd] : acc + 0),
+        0
+      )
+    )
+  );
+  let intraDist = clusterDistances.map((val, ind) => val[labels[ind]]);
+  let interDist = clusterDistances
+    .map((mVal, mInd) => {
+      mVal[labels[mInd]] += Infinity;
+      labelFrequencies.forEach((fVal, fInd) => (mVal[fInd] /= fVal));
+      return mVal;
+    })
+    .map((val) => Math.min(...val));
+  return {
+    intraDist: intraDist,
+    interDist: interDist,
+  };
+}
+
+module.exports = silhouetteScore;
+
+},{"ml-distance-euclidean":10,"ml-distance-matrix":11}],3:[function(require,module,exports){
 (function() {
   /**
    *
@@ -6014,7 +6180,7 @@ function get(){
   }
 
 }).call(this);
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 /**
  * DBSCAN - Density based clustering
  *
@@ -6252,7 +6418,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = DBSCAN;
 }
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 /**
  * DBSCAN - Density based clustering
  *
@@ -6337,11 +6503,12 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
         }
       }
     }
-    console.log(this.clusters);
-    console.log(this.noise);
-    console.log("before declustering");
+    //console.log(this.clusters);
+    //console.log(this.noise);
+    //console.log("before declustering");
     
     //Declusters extremely small clusters in large datasets into noise
+    /*
     if (this.dataset.length > 1000){
       var t = this.minPts*2;
       for (var clusterId = 0; clusterId < this.clusters.length; clusterId++){
@@ -6353,13 +6520,14 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
           this.clusters[clusterId] = null;
         }
       }
-      console.log(this.clusters);
-      console.log("before filtering");
+      //console.log(this.clusters);
+      //console.log("before filtering");
       this.clusters = this.clusters.filter((e) => e !== null)
     }
-    console.log(this.clusters);
-    console.log(this.noise);
-    console.log("before forcing");
+*/
+    //console.log(this.clusters);
+    //console.log(this.noise);
+    //console.log("before forcing");
 
     
 
@@ -6370,7 +6538,7 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
         //console.log(this._centroid(this.clusters[i]))
         this.clusterCentroids.push(this._centroid(this.clusters[i]));
       }
-      console.log(this.clusterCentroids, this.noise);
+      //console.log(this.clusterCentroids, this.noise);
       for (var pointId = 0; pointId < this.noise.length; pointId++) {
         var dist = 0;
         var nearestClusterId = 0;
@@ -6391,8 +6559,6 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
       }
       this.noise = [];
     }
-
-    
     return this.clusters;
   };
   
@@ -6585,7 +6751,7 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = FIZZSCAN;
   }
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 /**
  * KMEANS clustering
  *
@@ -6800,7 +6966,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = KMEANS;
 }
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 
 /**
  * @requires ./PriorityQueue.js
@@ -7071,7 +7237,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = OPTICS;
 }
 
-},{"./PriorityQueue.js":7}],7:[function(require,module,exports){
+},{"./PriorityQueue.js":8}],8:[function(require,module,exports){
 /**
  * PriorityQueue
  * Elements in this queue are sorted according to their value
@@ -7253,7 +7419,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = PriorityQueue;
 }
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
@@ -7265,4 +7431,58 @@ if (typeof module !== 'undefined' && module.exports) {
     };
 }
 
-},{"./DBSCAN.js":3,"./FIZZSCAN.js":4,"./KMEANS.js":5,"./OPTICS.js":6,"./PriorityQueue.js":7}]},{},[1]);
+},{"./DBSCAN.js":4,"./FIZZSCAN.js":5,"./KMEANS.js":6,"./OPTICS.js":7,"./PriorityQueue.js":8}],10:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+function squaredEuclidean(p, q) {
+    let d = 0;
+    for (let i = 0; i < p.length; i++) {
+        d += (p[i] - q[i]) * (p[i] - q[i]);
+    }
+    return d;
+}
+exports.squaredEuclidean = squaredEuclidean;
+function euclidean(p, q) {
+    return Math.sqrt(squaredEuclidean(p, q));
+}
+exports.euclidean = euclidean;
+
+},{}],11:[function(require,module,exports){
+'use strict';
+
+/**
+ * Computes a distance/similarity matrix given an array of data and a distance/similarity function.
+ * @param {Array} data An array of data
+ * @param {function} distanceFn  A function that accepts two arguments and computes a distance/similarity between them
+ * @return {Array<Array>} The distance/similarity matrix. The matrix is square and has a size equal to the length of
+ * the data array
+ */
+function distanceMatrix(data, distanceFn) {
+  const result = getMatrix(data.length);
+
+  // Compute upper distance matrix
+  for (let i = 0; i < data.length; i++) {
+    for (let j = 0; j <= i; j++) {
+      result[i][j] = distanceFn(data[i], data[j]);
+      result[j][i] = result[i][j];
+    }
+  }
+
+  return result;
+}
+
+function getMatrix(size) {
+  const matrix = [];
+  for (let i = 0; i < size; i++) {
+    const row = [];
+    matrix.push(row);
+    for (let j = 0; j < size; j++) {
+      row.push(0);
+    }
+  }
+  return matrix;
+}
+
+module.exports = distanceMatrix;
+
+},{}]},{},[1]);

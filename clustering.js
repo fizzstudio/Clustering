@@ -2,6 +2,9 @@
 //console.log(s1.data);
 var clustering = require('./node_modules/density-clustering');
 var csv2json = require('csvjson-csv2json');
+const silhouette = require('@robzzson/silhouette');
+
+
 const data = csv2json(get());
 
 let dataArray = [];
@@ -22,9 +25,8 @@ for (let i = 0; i < dataArray.length; i++) {
 }
 distAvg.push(sum)
 }
-
 distAvg = distAvg.map((x) => x / dataArray.length)
-console.log(distAvg);
+
 /*
 const NNcanvas = document.getElementById("NNCanvas");
     const NNctx = NNcanvas.getContext("2d");
@@ -58,7 +60,53 @@ console.log(clusters, plot);
 var fizzscan = new clustering.FIZZSCAN();
 var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
 console.log(clusters, fizzscan.noise);
-console.log(clusters.length);
+console.log(`Number of clusters: ${clusters.length}`)
+
+
+
+console.log(dataArray);
+var datasetCentroid = getCentroid(dataArray);
+
+
+
+var BCSS = 0;
+var WCSS = 0;
+for (var i = 0; i < clusters.length; i++){
+  var clusteredData = [];
+  for (var j = 0; j < clusters[i].length; j++){
+    clusteredData.push(dataArray[clusters[i][j]])
+  }
+  BCSS += clusteredData.length * euclidDistance(getCentroid(clusteredData), datasetCentroid);
+}
+for (var i = 0; i < clusters.length; i++){
+  var clusteredData = [];
+  for (var j = 0; j < clusters[i].length; j++){
+    clusteredData.push(dataArray[clusters[i][j]])
+  }
+  for (var j = 0; j < clusteredData.length; j++){
+    WCSS += euclidDistance(clusteredData[j], getCentroid(clusteredData));
+  }
+  
+}
+CHI = BCSS*(dataArray.length-clusters.length)/(WCSS*(clusters.length-1))
+console.log(`Calinski–Harabasz index: ${CHI}`)
+
+
+var silhouetteLabels = [];
+for (var i = 0; i < dataArray.length; i++){
+  silhouetteLabels.push(0);
+}
+for (var i = 0; i < clusters.length; i++){
+  //console.log(i);
+  for (var j = 0; j < clusters[i].length; j++){
+    //console.log(j);
+    silhouetteLabels[clusters[i][j]] = i;
+  }
+}
+let silhouetteScore = silhouette(dataArray, silhouetteLabels);
+console.log(`Sillhouette score: ${silhouetteScore}`);
+
+
 
 
 const canvas = document.getElementById("myCanvas");
@@ -122,6 +170,25 @@ function nNDistances(dataset, pointId) {
   //return distances.sort().slice(0, minPts);
 };
 
+function getCentroid(c) {
+  var centroid = [];
+  var i = 0;
+  var j = 0;
+  var l = c.length;
+
+  for (i = 0; i< l; i++){
+      for (j = 0; j< c[i].length; j++){
+          if (centroid[j] !== undefined){
+              centroid[j] += c[i][j]/l;
+          }
+          else{
+              centroid.push(0);
+              centroid[j] += c[i][j]/l;
+          }
+      }
+  }
+  return centroid;
+}
 
 function get(){
   let data = `x,y
