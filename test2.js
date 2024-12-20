@@ -1,3 +1,4 @@
-var sneed = require(test1.js)
-console.log("fuck you javascript");
-console.log(sneed);
+import { __esModule } from "./bundle";
+
+var sneed = "chuck";
+__esModule = {sneed};

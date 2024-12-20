@@ -15,7 +15,7 @@
   ],
   "author": "",
   "license": "ISC",
-  "type": "module",
+  
   "dependencies": {
     "@robzzson/silhouette": "^0.0.7",
     "csvjson-csv2json": "^5.0.6",
