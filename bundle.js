@@ -62,13 +62,13 @@ var fizzscan = new clustering.FIZZSCAN();
 var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
 console.log(clusters, fizzscan.noise);
 console.log(`Number of clusters: ${clusters.length}`)
+console.log(`Total elements: ${clusters.flat().length}`)
 
-
-
-console.log(dataArray);
 var datasetCentroid = getCentroid(dataArray);
 
+//console.log(Date.now());
 
+/*
 
 var BCSS = 0;
 var WCSS = 0;
@@ -90,8 +90,9 @@ for (var i = 0; i < clusters.length; i++){
   
 }
 CHI = BCSS*(dataArray.length-clusters.length)/(WCSS*(clusters.length-1))
-console.log(`Calinski–Harabasz_index: ${CHI}`)
+console.log(`Calinski–Harabasz index: ${CHI}`)
 
+//console.log(Date.now());
 
 var silhouetteLabels = [];
 for (var i = 0; i < dataArray.length; i++){
@@ -105,9 +106,11 @@ for (var i = 0; i < clusters.length; i++){
   }
 }
 let silhouetteScore = silhouette(dataArray, silhouetteLabels);
-console.log(`Calinski–Harabasz_index: ${silhouetteScore}`);
+console.log(`Sillhouette score: ${silhouetteScore}`);
 
+//console.log(Date.now());
 
+*/
 
 
 const canvas = document.getElementById("myCanvas");
@@ -124,7 +127,7 @@ const canvas = document.getElementById("myCanvas");
       xArray.push(dataArray[i][0]);
       yArray.push(dataArray[i][1]);
     }
-    const palette = ["red", "orange", "yellow", "green", "blue", "chartreuse", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
+    const palette = ["red", "orange", "yellow", "green", "blue", "chartreuse", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "chartreuse", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 
     for (let i = 0; i < xArray.length-1; i++) {
       let x = xArray[i]/1000;
@@ -144,6 +147,21 @@ const canvas = document.getElementById("myCanvas");
         ctx.fill();
       }
       
+
+    }
+    for (let i = 0; i < fizzscan.clusterCentroids.length; i++){
+      let x = fizzscan.clusterCentroids[i][0]/1000;
+      let y = fizzscan.clusterCentroids[i][1]/1000;
+      ctx.beginPath();
+      ctx.fillStyle = palette[i];
+      ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.closePath();
+      ctx.beginPath();
+      ctx.fillStyle = "black";
+      ctx.ellipse(x, y, 6, 6, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.closePath();
     }
 
 
@@ -1526,7 +1544,7 @@ function get(){
 877125,161227
 883864,111281
 891699,170415
-802394,
+802394,87835
 862759,157988
 824185,167369
 813124,157130
@@ -1599,7 +1617,7 @@ function get(){
 902529,162041
 908069,146564
 799326,106384
-854996,
+854996,81095
 843813,182032
 888504,147016
 877964,242679
@@ -1656,7 +1674,7 @@ function get(){
 850533,160136
 816393,185056
 850911,157772
-812942,
+812942,85345
 835581,147664
 913298,162009
 858172,137586
@@ -1677,7 +1695,7 @@ function get(){
 849681,125345
 854463,159977
 883567,161769
-848137,
+848137,87922
 823676,152154
 848135,130674
 844400,150812
@@ -1726,7 +1744,7 @@ function get(){
 825541,151495
 883231,232031
 864667,143614
-805089,
+805089,96540
 854909,149938
 847097,176660
 910435,171155
@@ -2269,11 +2287,11 @@ function get(){
 144228,344974
 146821,297434
 171848,343242
-,
+94382,320888
 154412,310120
 176490,344679
 170616,352610
-,
+81648,360080
 153607,379395
 183970,355973
 105444,361358
@@ -2317,7 +2335,7 @@ function get(){
 184798,392233
 174438,319075
 107124,325984
-,
+76052,360840
 159302,337993
 140101,341028
 168149,345638
@@ -2363,7 +2381,7 @@ function get(){
 117874,389929
 162921,317643
 173978,346514
-,
+98533,355691
 194956,372256
 164847,287064
 174410,372064
@@ -3106,6 +3124,7 @@ function get(){
 257134,845851
 187314,815820
 294275,174786
+329428,66056
 325938,164475
 253129,154296
 319838,170383
@@ -3120,9 +3139,11 @@ function get(){
 291170,110147
 321522,163852
 202627,179376
+307913,91419
 311093,169734
 321775,164846
 294832,124284
+295537,91032
 383044,180418
 338570,192256
 337894,175289
@@ -3137,16 +3158,19 @@ function get(){
 287966,150135
 346942,152780
 232784,169847
+292492,99170
 334529,166765
 363208,238649
 196795,190277
 353333,113156
+373191,88470
 333789,151168
 339732,163158
 321822,187102
 276792,141848
 308044,164482
 311328,159477
+383052,89061
 316820,150304
 314479,178821
 310824,144943
@@ -3170,9 +3194,12 @@ function get(){
 330533,214555
 320400,160020
 267662,127175
+396583,82842
 292193,125417
+324121,96346
 321344,166633
 234837,151054
+368060,76739
 347050,150472
 245783,109229
 400550,144359
@@ -3241,6 +3268,7 @@ function get(){
 390934,170420
 358562,112650
 355499,224982
+363437,77975
 232043,177614
 246753,175170
 327204,152871
@@ -3284,9 +3312,11 @@ function get(){
 378347,144880
 322789,137560
 328425,159826
+341137,78287
 317771,154916
 336266,148507
 342066,119083
+297177,88467
 280519,165350
 305901,166656
 284757,175853
@@ -3299,6 +3329,7 @@ function get(){
 278116,185472
 247892,115217
 306326,164202
+311516,94189
 323747,163351
 321778,158339
 309501,166931
@@ -3366,6 +3397,7 @@ function get(){
 283571,109326
 308748,199866
 369490,164369
+270729,67329
 279010,181792
 282957,179982
 308489,145929
@@ -3378,6 +3410,7 @@ function get(){
 268518,181514
 285865,167818
 279251,184486
+306042,66361
 318215,180010
 293978,197091
 338044,233264
@@ -3387,6 +3420,7 @@ function get(){
 248779,111087
 313783,177198
 415534,110526
+296164,96874
 315670,160928
 339137,160334
 290700,196285
@@ -3402,12 +3436,14 @@ function get(){
 335003,151395
 267212,158699
 343851,193618
+296627,93375
 334980,143900
 335235,180161
 360945,167952
 257841,193878
 275288,212315
 331798,143962
+333937,51121
 328775,156501
 319829,168353
 293201,192871
@@ -3416,6 +3452,7 @@ function get(){
 348815,150017
 312227,159417
 324337,162686
+323329,93955
 291973,127483
 258779,106777
 325360,134919
@@ -3435,6 +3472,7 @@ function get(){
 102460,533057
 185935,554627
 123441,594415
+97216,564094
 110948,539533
 101553,517715
 133023,574572
@@ -3444,9 +3482,12 @@ function get(){
 179189,536028
 141238,557986
 156430,615117
+69169,631490
+31842,565765
 144620,575370
 155899,561715
 137451,555339
+68388,574380
 166290,521714
 210499,526471
 148319,584541
@@ -3455,14 +3496,17 @@ function get(){
 136301,569544
 119386,620549
 139212,557713
+84501,604671
 176602,574552
 105945,528795
 140989,537156
 138449,555969
 128669,574591
+95749,602775
 139460,557260
 130440,562623
 147885,527813
+58190,608304
 151701,574146
 148385,538149
 142668,544976
@@ -3480,8 +3524,10 @@ function get(){
 137347,622867
 139146,569516
 125756,579609
+77109,512651
 138073,556272
 202547,601240
+19835,570290
 118137,579149
 201324,574588
 113259,568684
@@ -3492,6 +3538,7 @@ function get(){
 220156,589643
 137787,566189
 138122,557230
+93136,613387
 154620,576738
 131523,568207
 136967,565662
@@ -3505,11 +3552,13 @@ function get(){
 136078,547418
 140164,531093
 156003,502860
+67867,545392
 133780,533275
 116142,550919
 148510,579793
 179224,584189
 149906,546909
+29760,557873
 115287,602637
 206561,574789
 108651,521409
@@ -3530,6 +3579,8 @@ function get(){
 104862,608089
 158366,537970
 138525,534268
+69565,599820
+94571,528963
 153185,562792
 147599,513563
 223226,546198
@@ -3553,6 +3604,7 @@ function get(){
 183026,545377
 152658,569277
 172116,513383
+95899,530846
 144325,538991
 166597,572855
 105193,596017
@@ -3586,13 +3638,17 @@ function get(){
 129030,588495
 155430,549012
 172756,612694
+93459,514032
+99569,523174
 148080,544056
 169322,577938
 173847,514665
 136418,562926
 140047,540043
+74519,527539
 146681,562995
 110877,562558
+95071,503965
 136232,576477
 146120,576624
 259173,548593
@@ -3601,13 +3657,16 @@ function get(){
 158283,570550
 206219,604081
 116492,509399
+97430,598804
 193275,538687
 116860,550810
 179834,541387
 143226,522375
 111174,539350
+94933,588147
 139434,557410
 131532,536658
+38179,532155
 113321,606322
 123905,508486
 201753,569116
@@ -3615,6 +3674,7 @@ function get(){
 138884,529162
 139636,565984
 110479,594587
+76253,529394
 160280,493497
 161475,587507
 149054,556986
@@ -3625,6 +3685,7 @@ function get(){
 161154,538355
 130157,581286
 142000,554964
+86243,559135
 130883,557824
 127964,538935
 122130,568886
@@ -3635,6 +3696,7 @@ function get(){
 130657,555545
 165382,518876
 221994,575146
+87236,607429
 154268,542573
 197367,535989
 133094,557996
@@ -3661,6 +3723,9 @@ function get(){
 134725,537440
 127940,590467
 143592,606949
+64979,538104
+94061,576129
+79285,554817
 103192,550021
 198823,538624
 145758,562414
@@ -3671,11 +3736,16 @@ function get(){
 142767,538646
 143912,595772
 184412,537050
+55359,623076
 137197,556522
 138461,558771
+80673,566893
 203667,577260
+94249,600812
 145244,561042
+94458,533883
 130201,562734
+98675,580608
 134422,544300
 141771,551655
 141924,558399
@@ -3687,7 +3757,9 @@ function get(){
 170494,560892
 164453,544085
 128788,546091
+88703,577217
 131109,568012
+95074,570002
 232047,522748
 125548,552424
 142563,560090
@@ -3695,6 +3767,8 @@ function get(){
 132497,593125
 162713,586568
 122296,566921
+56907,586609
+48143,523870
 104489,542515
 130582,565948
 180633,570302
@@ -3711,9 +3785,11 @@ function get(){
 105353,589239
 119496,543146
 142575,517378
+76661,531044
 137699,556769
 154964,554923
 142516,559062
+98525,579761
 163925,576666
 153326,558408
 262846,559590
@@ -3722,6 +3798,7 @@ function get(){
 193502,557364
 202175,495076
 154162,536416
+77875,516899
 163477,561507
 131874,552586
 120357,560737
@@ -3732,6 +3809,7 @@ function get(){
 233105,591646
 149760,577278
 139237,548782
+34795,606311
 147663,555514
 108512,525986
 509279,180548
@@ -3758,6 +3836,7 @@ function get(){
 517750,199025
 520952,169184
 559076,190770
+416763,96639
 549384,208450
 549147,171454
 520880,200955
@@ -3844,6 +3923,7 @@ function get(){
 491382,122267
 457033,127590
 535453,200970
+436641,55171
 520845,176291
 496130,178113
 507473,227670
@@ -3887,6 +3967,7 @@ function get(){
 474527,107596
 499643,171625
 514722,190943
+474641,81263
 495995,160032
 516963,174184
 521006,163218
@@ -3948,6 +4029,7 @@ function get(){
 507741,178883
 486224,196184
 509039,173839
+462658,75167
 519680,208378
 499676,196897
 480876,160465
@@ -6507,8 +6589,13 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
     //console.log(this.noise);
     //console.log("before declustering");
     
-    //Declusters extremely small clusters in large datasets into noise
-    /*
+    //Declusters extremely small clusters in large datasets into noise.
+
+    //Current behavior forces the small cluster points into the last indexed large cluster instead of noise for some reason.
+    //The above statements will log the clusters as already having been modified before the below code block runs, also for some reason.
+
+
+   
     if (this.dataset.length > 1000){
       var t = this.minPts*2;
       for (var clusterId = 0; clusterId < this.clusters.length; clusterId++){
@@ -6524,13 +6611,10 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
       //console.log("before filtering");
       this.clusters = this.clusters.filter((e) => e !== null)
     }
-*/
     //console.log(this.clusters);
     //console.log(this.noise);
     //console.log("before forcing");
-
-    
-
+/*
     //Optionally forces clustering of noise/outlier points by distance to nearest centroid
     if (this.forceIn){
       for (var i = 0; i< this.clusters.length; i++){
@@ -6540,25 +6624,67 @@ function FIZZSCAN(dataset, epsilon, minPts, forceIn, distanceFunction) {
       }
       //console.log(this.clusterCentroids, this.noise);
       for (var pointId = 0; pointId < this.noise.length; pointId++) {
-        var dist = 0;
-        var nearestClusterId = 0;
+        let dist = 0;
+        let nearestClusterId = 0;
         for (var clusterId = 0; clusterId < this.clusterCentroids.length; clusterId++) {
-          var testDist = this.distance(pointId, this.clusterCentroids[clusterId])
+          let testDist = this.distance(dataset[pointId], this.clusterCentroids[clusterId])
           if (dist == 0){
             dist = testDist;
             nearestClusterId = clusterId;
           }
           else{
-            if (dist>testDist){
+            if (dist > testDist){
+              //console.log("hit")
+              //console.log(testDist)
+              //console.log(clusterId)
               dist = testDist;
               nearestClusterId = clusterId;
             }
           }
         }
+        console.log(this.noise[pointId]);
         this._addToCluster(this.dataset.indexOf(this.dataset[this.noise[pointId]]),nearestClusterId);
       }
       this.noise = [];
     }
+*/
+if (this.forceIn){
+  for (var i = 0; i< this.clusters.length; i++){
+    //console.log(this.clusters[i]);
+    //console.log(this._centroid(this.clusters[i]))
+    this.clusterCentroids.push(this._centroid(this.clusters[i]));
+  }
+  //console.log(this.clusterCentroids, this.noise);
+  for (var noisePointID of this.noise) {
+    let dist = 0;
+    let nearestClusterId = 0;
+    for (var clusterId = 0; clusterId < this.clusterCentroids.length; clusterId++) {
+      let testDist = this.distance(dataset[noisePointID], this.clusterCentroids[clusterId])
+      if (dist == 0){
+        dist = testDist;
+        nearestClusterId = clusterId;
+      }
+      else{
+        if (dist > testDist){
+          //console.log("hit")
+          //console.log(testDist)
+          //console.log(clusterId)
+          dist = testDist;
+          nearestClusterId = clusterId;
+        }
+      }
+    }
+    console.log(noisePointID);
+    this._addToCluster(noisePointID, nearestClusterId);
+  }
+  this.noise = [];
+}
+
+
+
+
+
+
     return this.clusters;
   };
   
