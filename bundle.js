@@ -7,7 +7,7 @@ const silhouette = require('@robzzson/silhouette');
 
 
 //const data = csv2json(get());
-const data = csv2json(d3Data);
+const data = csv2json(s2Data);
 
 
 let dataArray = [];
@@ -61,7 +61,7 @@ var plot = optics.getReachabilityPlot();
 console.log(clusters, plot);
 */
 var fizzscan = new clustering.FIZZSCAN();
-var clusters = fizzscan.run(dataArray, distAvg[minPts], minPts, true);
+var clusters = fizzscan.run(dataArray, 1.625*distAvg[minPts], minPts, true);
 console.log(clusters, fizzscan.noise);
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
@@ -136,8 +136,8 @@ const canvas = document.getElementById("myCanvas");
     const palette = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 
     for (let i = 0; i < xArray.length-1; i++) {
-      let x = xArray[i]*30;
-      let y = yArray[i]*30;
+      let x = xArray[i]/1000;
+      let y = yArray[i]/1000;
       ctx.beginPath();
       for (let j = 0; j < clusters.length; j++){
         if (clusters[j].includes(i)){
@@ -156,8 +156,8 @@ const canvas = document.getElementById("myCanvas");
 
     }
     for (let i = 0; i < fizzscan.clusterCentroids.length; i++){
-      let x = fizzscan.clusterCentroids[i][0]*30;
-      let y = fizzscan.clusterCentroids[i][1]*30;
+      let x = fizzscan.clusterCentroids[i][0]/1000;
+      let y = fizzscan.clusterCentroids[i][1]/1000;
       ctx.beginPath();
       ctx.fillStyle = palette[i];
       ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);

@@ -15,10 +15,10 @@
   ],
   "author": "",
   "license": "ISC",
-  
   "dependencies": {
     "@robzzson/silhouette": "^0.0.7",
     "csvjson-csv2json": "^5.0.6",
-    "density-clustering": "^1.3.0"
+    "density-clustering": "^1.3.0",
+    "plotly.js-dist": "^2.35.3"
   }
 }
