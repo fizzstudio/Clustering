@@ -1,11 +1,11 @@
 
 /*
-data1 = [[1,6], [3,1], [7,2], [4,4], [8,5]];
-data2 = [[0,5], [2,0], [6,1], [3,3], [7,4]];
 
+var data1 = [{x:1,y:0}, {x:.707,y:.707}, {x:0,y:1}, {x:-.707,y:.707}, {x:-1,y:0},{x:-.707,y:-.707}, {x:0,y:-1}, {x:.707,y:-.707}];
+var data2 = [{x:0,y:0}, {x:1,y:1}, {x:2,y:2}, {x:-3,y:3}, {x:4,y:4},{x:5,y:5}, {x:6,y:6}, {x:7,y:7}]
 console.log(shoelace(data1));
 console.log(shoelace(data2));
-*/
+
 var data = [
     {
         "x": "101403",
@@ -760,45 +760,60 @@ var data = [
         "y": "178019"
     }
 ]
-data1 = [{x:1,y:0}, {x:.707,y:.707}, {x:0,y:1}, {x:-.707,y:.707}, {x:-1,y:0},{x:-.707,y:-.707}, {x:0,y:-1}, {x:.707,y:-.707}];
-function shoelace(data){
-    let sum = 0;
+*/
+let data1 = [[1,6], [3,1], [7,2], [4,4], [8,5]];
+let data2 = [[0,5], [2,0], [6,1], [3,3], [7,4]];
+function region(data){
+    let regions = [];
     let n = data.length;
-    for (let i = 0; i < n - 1; i++){
-        sum += data[i].x * data[i+1].y - data[i].y * data[i+1].x
+    let xMax = 0;
+    let yMax = 0;
+    for (let i = 0; i < n; i++){
+      if (xMax < data[i][0]){
+        xMax = data[i][0];
+      }
+      if (yMax < data[i][1]){
+        yMax = data[i][1];
+      }
     }
-    sum += data[n-1].x * data[0].y - data[n-1].y * data[0].x
-    return Math.abs(sum/2);
+    let left = xMax/3;
+    let right = xMax*2/3;
+    let down = yMax/3;
+    let up = yMax*2/3;
+
+    for (let point of data){
+    let test = [point[0] < left , point[0]< right, point[1] < down, point[1] < up];
+      switch (true) {
+        case JSON.stringify(test) == JSON.stringify([true, true, true, true]) :
+             regions.push("bottom left");
+             break;
+        case JSON.stringify(test) == JSON.stringify([false, true, true, true]) :
+             regions.push("bottom center");
+             break;
+        case JSON.stringify(test) == JSON.stringify([false, false, true, true]) :
+             regions.push("bottom right");
+             break;
+        case JSON.stringify(test) == JSON.stringify([true, true, false, true]) :
+             regions.push("left");
+             break;
+        case JSON.stringify(test) == JSON.stringify([false, true, false, true]) :
+             regions.push("center");
+             break;
+        case JSON.stringify(test) == JSON.stringify([false, false, false, true]) :
+             regions.push("right");
+             break;
+        case JSON.stringify(test) == JSON.stringify([true, true, false, false]) :
+             regions.push("top right");
+             break;
+        case JSON.stringify(test) == JSON.stringify([false, true, false, false]) :
+             regions.push("top center");
+             break;
+        case JSON.stringify(test) == JSON.stringify([false, false, false, false]) :
+             regions.push("top left");
+      }
+    }
+    return regions;
   }
-  
-  function perimeter(data){
-    let sum = 0;
-    let n = data.length;
-    for (let i = 0; i < n - 1; i++){
-      pointer = [data[i].x, data[i].y];
-      next = [data[i+1].x, data[i+1].y];
-      sum += euclidDistance(pointer, next);
-    }
-    sum += euclidDistance([data[n-1].x, data[n-1].y], [data[0].x, data[0].y])
-    return sum;
-  }
-  
-  function euclidDistance(p, q) {
-    //Returns euclidean distance between vectors p and q.
-    var sum = 0;
-    var i = Math.min(p.length, q.length);
-  
-    while (i--) {
-      sum += (p[i] - q[i]) * (p[i] - q[i]);
-    }
-  
-    return Math.sqrt(sum);
-  };
-  
-  shellPoints = data1;
-  console.log(shellPoints);
-  shellArea = shoelace(shellPoints)
-  console.log(shellArea)
-  shellPerim = perimeter(shellPoints)
-  console.log(shellPerim)
-  console.log(2*Math.sqrt(shellArea*Math.PI)/shellPerim);
+    
+console.log(data1);
+console.log(region(data1));

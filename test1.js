@@ -109,3 +109,27 @@ console.log(shellArea)
 shellPerim = perimeter(shellPoints)
 console.log(shellPerim)
 console.log(2*Math.sqrt(shellArea*Math.PI)/shellPerim);
+
+
+
+
+
+
+
+
+
+function deCoordinate(array){
+  var dataArray = [];
+  for (let i = 0; i < array.length; i++) {
+    dataArray.push([array[i]["x"], array[i]["y"]])
+  }
+  return dataArray;
+}
+
+function coordinate(array){
+  var dataArray = [];
+  for (let i = 0; i < array.length; i++) {
+    dataArray.push({x : array[i][0], y : array[i][1]})
+  }
+  return dataArray;
+}
