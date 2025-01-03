@@ -30,7 +30,7 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 let minPts = 4;
 
 var fizzscan = new clustering.FIZZSCAN();
-var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
+var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
 console.log(clusters, fizzscan.noise);
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
@@ -41,21 +41,20 @@ var datasetCentroid = getCentroid(dataArray);
 
 let clusterRegions = region(fizzscan.clusterCentroids);
 
-
-
-
-console.log(clusters);
 let i = 0;
 const palette = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 for (var cluster of clusters){
   var clusterData = [];
-  for (var point in cluster){
+  for (var point of cluster){
     clusterData.push(dataArray[point]);
   }
-  console.log(`sneed`);
-  console.log(`This cluster is in the ${clusterRegions[i]} of the overall data.`)
-  console.log(palette[i])
-  console.log(flatness(coordinate(clusterData)))
+  console.log(`This cluster is in the ${clusterRegions[i]} of the overall data.`);
+  console.log(`This cluster is colored ${palette[i]}`);
+  console.log(clusterData);
+  let flat = flatness(convexhull.makeHull(coordinate(clusterData)))
+  console.log(`The shape of the data is ${judgeShape(flat)}`)
+  console.log(flat);
+  console.log("-----------");
   
   i++;
 }
@@ -144,6 +143,7 @@ function nNDistances(dataset, pointId) {
 };
 
 function getCentroid(c) {
+  //Calculates centroid point of a data set
   var centroid = [];
   var i = 0;
   var j = 0;
@@ -205,6 +205,7 @@ console.log(`Sillhouette score: ${silhouetteScore}`);
 */
 
 function shoelace(data){
+  //Calculates area from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
   let sum = 0;
   let n = data.length;
   for (let i = 0; i < n - 1; i++){
@@ -215,6 +216,7 @@ function shoelace(data){
 }
 
 function perimeter(data){
+  //Calculates perimeter from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
   let sum = 0;
   let n = data.length;
   if (n == 2){
@@ -230,10 +232,26 @@ function perimeter(data){
 }
 
 function flatness(data){
+  //Gets flatness coefficient from perimeter and area
   return 2*Math.sqrt(shoelace(data)*Math.PI)/perimeter(data);
 }
 
+function judgeShape(flatness){
+  if (flatness > .9){
+    return "roughly circular";
+  }
+  else{
+    return "irregular";
+  }
+}
+
+
+
+
+
+
 function deCoordinate(array){
+  //Removes x-y coordinates from arrays
   var dataArray = [];
   for (let i = 0; i < array.length; i++) {
     dataArray.push([array[i]["x"], array[i]["y"]])
@@ -242,6 +260,7 @@ function deCoordinate(array){
 }
 
 function coordinate(array){
+  //Adds x-y coordinates to arrays
   var dataArray = [];
   for (let i = 0; i < array.length; i++) {
     dataArray.push({x : array[i][0], y : array[i][1]})
@@ -255,8 +274,8 @@ function generateHeatmap(dataArray, precision){
 
 
 
-var y = [];
-var x = [];
+let y = [];
+let x = [];
 
 for (let point of dataArray){
     x.push(point[0]);
@@ -264,10 +283,10 @@ for (let point of dataArray){
   }
 
 
-var yMax = Math.max(...y)*1.1;
-var xMax = Math.max(...x)*1.1;
-var yMin = Math.min(...y)*.91;
-var xMin = Math.min(...x)*.91;
+let yMax = Math.max(...y)*1.1;
+let xMax = Math.max(...x)*1.1;
+let yMin = Math.min(...y)*.91;
+let xMin = Math.min(...x)*.91;
 
 
 
@@ -325,22 +344,32 @@ Plotly.newPlot(TESTER2, trace1)
 }
 
 function region(data){
+  //Classifies datapoints into one of 9 regions (3x3) and returns an array of strings describing those regions.
+
   let regions = [];
   let n = data.length;
-  let xMax = 0;
-  let yMax = 0;
+  let xMax = data[0][0];
+  let yMax = data[0][1];
+  let xMin = data[0][0];
+  let yMin = data[0][1];
   for (let i = 0; i < n; i++){
     if (xMax < data[i][0]){
       xMax = data[i][0];
     }
+    if (xMin > data[i][0]){
+      xMin = data[i][0];
+    }
     if (yMax < data[i][1]){
       yMax = data[i][1];
     }
+    if (yMin > data[i][1]){
+      yMin = data[i][1];
+    }
   }
-  let left = xMax/3;
-  let right = xMax*2/3;
-  let down = yMax/3;
-  let up = yMax*2/3;
+  let left = ((xMax-xMin) / 3) + xMin;
+  let right = ((xMax-xMin) * 2 / 3) + xMin;
+  let down = ((yMax-yMin) / 3) + yMin;
+  let up = ((yMax-yMin) * 2 / 3) + yMin;
 
   for (let point of data){
   let test = [point[0] < left , point[0]< right, point[1] < down, point[1] < up];
@@ -364,14 +393,15 @@ function region(data){
            regions.push("right");
            break;
       case JSON.stringify(test) == JSON.stringify([true, true, false, false]) :
-           regions.push("top right");
+           regions.push("top left");
            break;
       case JSON.stringify(test) == JSON.stringify([false, true, false, false]) :
            regions.push("top center");
            break;
       case JSON.stringify(test) == JSON.stringify([false, false, false, false]) :
-           regions.push("top left");
+           regions.push("top right");
     }
   }
   return regions;
 }
+
