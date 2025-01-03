@@ -48,13 +48,23 @@ for (var cluster of clusters){
   for (var point of cluster){
     clusterData.push(dataArray[point]);
   }
+  console.log(clusterData);
+  console.log(`This is cluster Number ${i + 1}`)
   console.log(`This cluster is in the ${clusterRegions[i]} of the overall data.`);
   console.log(`This cluster is colored ${palette[i]}`);
-  console.log(clusterData);
   let flat = flatness(convexhull.makeHull(coordinate(clusterData)))
   console.log(`The shape of the data is ${judgeShape(flat)}`)
-  console.log(flat);
-  console.log("-----------");
+  //console.log(flat);
+  let closest = nNIndices(fizzscan.clusterCentroids, i);
+  let distances = nNDistances(fizzscan.clusterCentroids, i)
+  function getAngle(n){
+    return judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[n]]);
+  }
+  console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
+    Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
+    and Cluster ${closest[3] + 1} (${Math.round(distances[3])} units away to the ${getAngle(3)})
+  `)
+  console.log("-------------------------");
   
   i++;
 }
@@ -140,6 +150,22 @@ function nNDistances(dataset, pointId) {
   }
   
   return distances.sort((a, b) => { return a - b; });
+};
+
+function nNIndices(dataset, pointId) {
+  //Returns list of nearest indices to a point, sorted low to high, including the point itself.
+  var distances = [];
+  for (var id = 0; id < dataset.length; id++) {
+    var dist = [id, euclidDistance(dataset[pointId], dataset[id])];
+    distances.push(dist);
+  }
+  
+  distances = distances.sort((a, b) => { return a[1] - b[1]; });
+  let indices = [];
+  for (let i = 0; i < dataset.length; i++){
+    indices.push(distances[i][0]);
+  }
+  return indices;
 };
 
 function getCentroid(c) {
@@ -240,8 +266,11 @@ function judgeShape(flatness){
   if (flatness > .9){
     return "roughly circular";
   }
-  else{
+  else if (flatness > .6){
     return "irregular";
+  }
+  else{
+    return "roughly linear";
   }
 }
 
@@ -310,6 +339,13 @@ for (let point of dataArray){
 var heatmapData = [
     {
       z: grid,
+      type: 'heatmap'
+    }
+  ];
+
+  var heatmapData2 = [
+    {
+      z: grid,
       colorscale: [
         ['0.0', 'rgb(255,255,255)'],
         ['0.111111111111', 'rgb(191,191,191)'],
@@ -327,10 +363,13 @@ var heatmapData = [
   ];
 
 
+HEATMAP1 = document.getElementById('heatmap1');
 
-TESTER1 = document.getElementById('tester1');
+Plotly.newPlot(HEATMAP1, heatmapData);
 
-Plotly.newPlot(TESTER1, heatmapData);
+HEATMAP2 = document.getElementById('heatmap2');
+
+Plotly.newPlot(HEATMAP2, heatmapData2);
 
 TESTER2 = document.getElementById('tester2');
 var trace1 = [{
@@ -405,3 +444,73 @@ function region(data){
   return regions;
 }
 
+function judgeAngle(x, y){
+  const subtraction = y.map((num, index) => num - x[index]);
+  let angle = 0;
+  if (subtraction[0] == 0 && subtraction[1] > 0){
+    angle = Math.PI / 2
+  }
+  else if (subtraction[0] == 0 && subtraction[1] > 0){
+    angle = -Math.PI / 2
+  }
+  else {
+    
+    switch (true){
+      case subtraction[0] > 0 && subtraction[1] > 0:
+        angle = Math.atan(subtraction[1] / subtraction[0])
+        break;
+      case subtraction[0] < 0 && subtraction[1] > 0:
+        angle = Math.atan(subtraction[0] / subtraction[1])
+        angle = Math.abs(angle) + Math.PI / 2;
+        break;
+      case subtraction[0] < 0 && subtraction[1] < 0:
+        angle = Math.atan(subtraction[1] / subtraction[0])
+        angle = Math.abs(angle) + Math.PI;  
+        break;
+      case subtraction[0] > 0 && subtraction [1] < 0:
+        angle = Math.atan(subtraction[0] / subtraction[1])
+        angle = Math.abs(angle) + 3 * Math.PI / 2;
+        break;
+    }
+  }
+  
+  let sin = Math.sin(angle);
+  let cos = Math.cos(angle);
+  const rt3 = Math.sqrt(3) / 2;
+  switch (true){
+    case -.5 < sin && sin < .5 && rt3 < cos:
+      return "east";
+    case .5 < sin && sin < rt3 && .5 < cos && cos < rt3:
+      return "north-east";  
+    case rt3 < sin && -.5 < cos && cos < .5:
+      return "north";  
+    case .5 < sin && sin < rt3 && -rt3 < cos && cos < -.5:
+      return "north-west";
+    case -.5 < sin && sin < .5 && cos < -rt3:
+      return "west";
+    case -rt3 < sin && sin < -.5 && -rt3 < cos && cos < -.5:
+      return "south-west";        
+    case sin < -rt3 && -.5 < cos && cos < .5:
+      return "south";  
+    case -rt3 < sin && sin < -.5 && .5 < cos && cos < rt3:
+      return "south-east";                 
+  }
+}
+
+function mostFrequent(arr) {
+  let m = new Map();
+  let maxCount = 0;
+  let res = null;
+
+  for (let num of arr) {
+      let count = (m.get(num) || 0) + 1;
+      m.set(num, count);
+
+      if (count > maxCount) {
+          maxCount = count;
+          res = num;
+      }
+  }
+
+  return res;
+}

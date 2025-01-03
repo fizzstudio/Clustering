@@ -2047,6 +2047,4 @@ function shoelace(data){
   }
 let data1 = [[0,0], [10,0], [0,10], [10,10], [5,5]];
 let data2 = [[0,5], [2,0], [6,1], [3,3], [7,4]];
-console.log(perimeter(data));
-console.log(shoelace(data));
-console.log(flatness(data));
+console.log(-Math.PI/2);
