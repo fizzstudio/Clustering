@@ -8,7 +8,7 @@ var Plotly = require('plotly.js-dist');
 const data = csv2json(s1Data);
 let dataArray = [];
 for (let i = 0; i < data.length; i++) {
-  dataArray.push([data[i]["x"], data[i]["y"]])
+  dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
 }
 
 //distAvg averges out the nearest neighbor distances over each point in the set
@@ -30,14 +30,14 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 let minPts = 4;
 
 var fizzscan = new clustering.FIZZSCAN();
-var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
+var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
 console.log(clusters, fizzscan.noise);
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
 console.log(`Total clustered elements: ${clusters.flat().length}`)
 console.log(`Total noise elements: ${fizzscan.noise.length}`)
 
-var datasetCentroid = getCentroid(dataArray);
+//var datasetCentroid = getCentroid(dataArray);
 
 let clusterRegions = region(fizzscan.clusterCentroids);
 
@@ -179,11 +179,9 @@ const canvas = document.getElementById("myCanvas");
         clusterData.push(dataArray[point]);
       }
       let shell = convexhull.makeHull(coordinate(clusterData));
-      console.log(shell);
       ctx.beginPath();
       ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
       for (let point of shell){
-        //console.log(point.x, point.y);
         ctx.lineTo(point.x / 1000, point.y / 1000);
         ctx.stroke();
       }
