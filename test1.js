@@ -1368,15 +1368,32 @@ for (let point of data){
     y.push(point.y);
 }
 
+shell = convexhull.makeHull(data);
+
+let y2 = [];
+let x2 = [];
+
+for (let point of shell){
+    x2.push(point.x);
+    y2.push(point.y);
+}
+
 TESTER2 = document.getElementById('tester2');
-var trace1 = [{
+var trace1 = {
     x: x,
     y: y,
-    mode: 'markers',    
+    mode: 'markers',
     type: 'scatter'
-  }];
+};
 
-Plotly.newPlot(TESTER2, trace1)
+var trace2 = {
+    x: x2,
+    y: y2,
+    mode: 'lines+markers',
+    type: 'scatter'
+};
+let temp = [trace1, trace2];
+Plotly.newPlot(TESTER2, temp);
 
 console.log(perimeter(data));
 console.log(shoelace(data));

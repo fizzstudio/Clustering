@@ -30,7 +30,7 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 let minPts = 4;
 
 var fizzscan = new clustering.FIZZSCAN();
-var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
+var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
 console.log(clusters, fizzscan.noise);
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
@@ -41,29 +41,75 @@ var datasetCentroid = getCentroid(dataArray);
 
 let clusterRegions = region(fizzscan.clusterCentroids);
 
+console.log("-------------------------")
+console.log("Individual Cluster Analysis")
+console.log("-------------------------")
+
+
+
+let masterArray = [];
 let i = 0;
+let mostDense = [0,0];
 const palette = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
-for (var cluster of clusters){
-  var clusterData = [];
-  for (var point of cluster){
+for (let cluster of clusters){
+  let clusterObject = {};
+  let clusterData = [];
+  for (let point of cluster){
     clusterData.push(dataArray[point]);
   }
-  console.log(clusterData);
-  console.log(`This is cluster Number ${i + 1}`)
+  //console.log(clusterData);
+  clusterObject.dataPoints = clusterData;
+  console.log(`This is cluster Number ${i}`)
+  clusterObject.id = i;
   console.log(`This cluster is in the ${clusterRegions[i]} of the overall data.`);
+  clusterObject.region = clusterRegions[i];
   console.log(`This cluster is colored ${palette[i]}`);
+  let area = shoelace(coordinate(clusterData));
   let flat = flatness(convexhull.makeHull(coordinate(clusterData)))
-  console.log(`The shape of the data is ${judgeShape(flat)}`)
-  //console.log(flat);
+  let shape = judgeShape(flat);
+  console.log(`The shape of the data is ${shape}`)
+  clusterObject.shape = shape;
+  let density = cluster.length / area;
+  clusterObject.density = density;
+
+
+
+
+
+
+  clusterObject.relations = [];
   let closest = nNIndices(fizzscan.clusterCentroids, i);
+  //clusterObject.nearestIndices = closest;
   let distances = nNDistances(fizzscan.clusterCentroids, i)
-  function getAngle(n){
-    return judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[n]]);
+  //clusterObject.nearestDistances = distances;
+
+  let angles =[];
+  for (let j = 0; j < clusters.length; j++){
+    let angle = judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
+    angles.push(angle);
+    clusterObject.relations.push({
+      "id": closest[j],
+      "distance": distances[j],
+      "angle": angle
+    })
   }
+  clusterObject.isMostDense = false;
+  masterArray.push(clusterObject);
+
+  if (density > mostDense[1]){
+    mostDense[1] = density;
+    masterArray[mostDense[0]].isMostDense = false;
+    masterArray[i].isMostDense = true;
+    mostDense[0] = i;
+  }
+
+  console.log(clusterObject);
+  /*
   console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
     Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
     and Cluster ${closest[3] + 1} (${Math.round(distances[3])} units away to the ${getAngle(3)})
   `)
+  */
   console.log("-------------------------");
   
   i++;
@@ -73,6 +119,7 @@ console.log("stop");
 var precision = 50;
 generateHeatmap(dataArray, precision);
 
+//Draws the main graph
 
 const canvas = document.getElementById("myCanvas");
     const ctx = canvas.getContext("2d");
@@ -126,6 +173,33 @@ const canvas = document.getElementById("myCanvas");
       ctx.stroke();
       ctx.closePath();
     }
+    for (let cluster of clusters){
+      let clusterData = [];
+      for (let point of cluster) {
+        clusterData.push(dataArray[point]);
+      }
+      let shell = convexhull.makeHull(coordinate(clusterData));
+      console.log(shell);
+      ctx.beginPath();
+      ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
+      for (let point of shell){
+        //console.log(point.x, point.y);
+        ctx.lineTo(point.x / 1000, point.y / 1000);
+        ctx.stroke();
+      }
+      ctx.lineTo(shell[0].x / 1000, shell[0].y / 1000)
+      ctx.stroke();
+      ctx.closePath();
+    }
+
+
+
+
+
+//Helper functions
+
+
+
 
 
 
@@ -474,26 +548,24 @@ function judgeAngle(x, y){
     }
   }
   
-  let sin = Math.sin(angle);
-  let cos = Math.cos(angle);
-  const rt3 = Math.sqrt(3) / 2;
+  angle = angle * 180 / Math.PI;
   switch (true){
-    case -.5 < sin && sin < .5 && rt3 < cos:
+    case 345 < angle || angle < 15:
       return "east";
-    case .5 < sin && sin < rt3 && .5 < cos && cos < rt3:
+    case 15 < angle && angle < 75:
       return "north-east";  
-    case rt3 < sin && -.5 < cos && cos < .5:
+    case 75 < angle && angle < 105:
       return "north";  
-    case .5 < sin && sin < rt3 && -rt3 < cos && cos < -.5:
+    case 105 < angle && angle < 165:
       return "north-west";
-    case -.5 < sin && sin < .5 && cos < -rt3:
+    case 165 < angle && angle < 195:
       return "west";
-    case -rt3 < sin && sin < -.5 && -rt3 < cos && cos < -.5:
+    case 195 < angle && angle < 255:
       return "south-west";        
-    case sin < -rt3 && -.5 < cos && cos < .5:
+    case 255 < angle && angle < 285:
       return "south";  
-    case -rt3 < sin && sin < -.5 && .5 < cos && cos < rt3:
-      return "south-east";                 
+    case 285 < angle && angle < 345:
+      return "south-east";                  
   }
 }
 
