@@ -179,6 +179,7 @@ const canvas = document.getElementById("myCanvas");
         clusterData.push(dataArray[point]);
       }
       let shell = convexhull.makeHull(coordinate(clusterData));
+      shell = simplifyShell(shell);
       ctx.beginPath();
       ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
       for (let point of shell){
@@ -317,6 +318,9 @@ function perimeter(data){
   //Calculates perimeter from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
   let sum = 0;
   let n = data.length;
+  if (n < 2){
+    return -1;
+  }
   if (n == 2){
     return euclidDistance([data[0].x, data[0].y], [data[1].x, data[1].y])
   }
@@ -516,7 +520,7 @@ function region(data){
   return regions;
 }
 
-function judgeAngle(x, y){
+function getAngle(x, y){
   const subtraction = y.map((num, index) => num - x[index]);
   let angle = 0;
   if (subtraction[0] == 0 && subtraction[1] > 0){
@@ -547,6 +551,11 @@ function judgeAngle(x, y){
   }
   
   angle = angle * 180 / Math.PI;
+  return angle;
+}
+
+function judgeAngle(x, y){
+  angle = getAngle(x,y);
   switch (true){
     case 345 < angle || angle < 15:
       return "east";
@@ -584,3 +593,133 @@ function mostFrequent(arr) {
 
   return res;
 }
+
+function simplifyShell(inputShell){
+  let shell = deCoordinate(inputShell);
+  let n = shell.length;
+  let precision = 15;
+  let angle1 = 0;
+  let angle2 = 0;
+  let difference = 0;
+  //Trims vertices from the shell which change the angle of the incoming line by less than precision degrees
+  for (let i = 0; i < n - 2; i++){
+      angle1 = getAngle(shell[i], shell[i + 1]);
+      angle2 = getAngle(shell[i + 1], shell[i + 2]);
+      difference = angle2 - angle1;
+      if ((-1*precision < difference && difference < precision) || (-1* precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)){
+          shell.splice(i + 1, 1);
+          i--;
+          n--;
+      }
+  }   
+
+  angle1 = getAngle(shell[n - 2], shell[n - 1]);
+  angle2 = getAngle(shell[n - 1], shell[0]);
+  difference = angle2 - angle1;
+  if ((-1 * precision < difference && difference < precision) || (-1 * precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)) {
+    shell.splice(n-1, 1);
+    n--;
+  }
+
+  angle1 = getAngle(shell[n - 1], shell[0]);
+  angle2 = getAngle(shell[0], shell[1]);
+  difference = angle2 - angle1;
+  if ((-1 * precision < difference && difference < precision) || (-1 * precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)) {
+    shell.splice(0, 1);
+    n--;
+  }
+
+  let peri = perimeter(coordinate(shell));
+  console.log(JSON.parse(JSON.stringify(shell)));
+  console.log("perimeter");
+  console.log(peri / 16);
+  for (let i = 0; i < n - 3; i++) {
+    if (euclidDistance(shell[i + 1], shell[i + 2]) < peri / 16) {
+      angle1 = getAngle(shell[i], shell[i + 1]);
+      angle2 = getAngle(shell[i + 2], shell[i + 3]);
+      difference = angle2 - angle1;
+      if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
+        let newPoint = completeAngle(shell[i], shell[i + 1], shell[i + 2], shell[i + 3])
+        shell[i + 1] = newPoint;
+        shell.splice(i + 2, 1);
+        i--;
+        n--;
+        console.log("after change")
+        console.log(JSON.parse(JSON.stringify(shell)));
+      }
+    }
+  }
+  if (n < 5){
+    return coordinate(shell);
+  }
+
+  if (euclidDistance(shell[n - 2], shell[n - 1]) < peri / 16) {
+    angle1 = getAngle(shell[n - 3], shell[n - 2]);
+    angle2 = getAngle(shell[n - 1], shell[0]);
+    difference = angle2 - angle1;
+    if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
+      let newPoint = completeAngle(shell[n - 3], shell[n - 2], shell[n - 1], shell[0])
+      shell[n - 2] = newPoint;
+      shell.splice(n - 1, 1);
+      n--;
+    }
+  }
+  if (n < 5){
+    return coordinate(shell);
+  }
+  if (euclidDistance(shell[n - 1], shell[0]) < peri / 16) {
+    angle1 = getAngle(shell[n - 2], shell[n - 1]);
+    angle2 = getAngle(shell[0], shell[1]);
+    difference = angle2 - angle1;
+    if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
+      let newPoint = completeAngle(shell[n - 2], shell[n - 1], shell[0], shell[1])
+      shell[n - 1] = newPoint;
+      shell.splice(0, 1);
+      n--;
+    }
+  }
+  if (n < 5){
+    return coordinate(shell);
+  }
+  if (euclidDistance(shell[0], shell[1]) < peri / 16) {
+    angle1 = getAngle(shell[n - 1], shell[0]);
+    angle2 = getAngle(shell[1], shell[2]);
+    difference = angle2 - angle1;
+    if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
+      let newPoint = completeAngle(shell[n - 1], shell[0], shell[1], shell[2])
+      shell[0] = newPoint;
+      shell.splice(1, 1);
+      n--;
+    }
+  } 
+  return coordinate(shell);    
+}
+
+function completeAngle(p1, p2, p3, p4){
+  //Calculates and returns the intersection point of the lines bridging p1-p2 and p3-p4.
+  //See derivation here: https://www.desmos.com/calculator/vmgoniltui If whoever's reading this has an easier way to do this let me know
+
+  //Handles edge case when two points are aligned vertically
+  if ((p2[0]-p1[0]) == 0){
+      if ((p4[0]-p3[0]) == 0){
+          //This should never happen if used on a convex polygon
+          return -1;
+      }
+      return (p4[1]-p3[1])/(p4[0]-p3[0]) * p1[0] + p3[1] - (p4[1]-p3[1])/(p4[0]-p3[0]) * p3[0];
+  }
+  
+  if ((p4[0]-p3[0]) == 0){
+      return (p2[1]-p1[1])/(p2[0]-p1[0]) * p3[0] + p1[1] - (p2[1]-p1[1])/(p2[0]-p1[0]) * p1[0];
+  }
+  
+  let slope12 = (p2[1]-p1[1])/(p2[0]-p1[0]);
+  let slope34 = (p4[1]-p3[1])/(p4[0]-p3[0]);
+  if ((slope12 - slope34) == 0){
+      //This should also never happen if used on a convex polygon
+      return -1;
+  }
+  let x = (p1[1] - p3[1] - slope12 * p1[0] + slope34 * p3[0]) / (slope34 - slope12);
+  let newPoint = [x, slope12 * x + p1[1] - slope12 * p1[0]];
+  return newPoint;
+  }
+  
