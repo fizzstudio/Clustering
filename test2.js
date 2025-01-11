@@ -26,4 +26,6 @@ return newPoint;
 }
 
 let test = completeAngle([0,1], [.25, 1.25], [1.5, .5], [2,0]);
-console.log(2 % 6);
+console.log((15 + 360) % 180);
+console.log((195 + 360) % 180);
+console.log((-165 + 360) % 180);

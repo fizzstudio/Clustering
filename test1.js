@@ -1397,7 +1397,7 @@ function getAngle(x, y){
     return angle;
 }
 
-function simplifyShell(inputShell){
+function simplifyHull(inputShell){
     let shell = deCoordinate(inputShell);
     let n = shell.length;
     let precision = 15;
@@ -1431,30 +1431,23 @@ function simplifyShell(inputShell){
       shell.splice(0, 1);
       n--;
     }
-  
-      let peri = perimeter(coordinate(shell));
-      console.log(JSON.parse(JSON.stringify(shell)));
-      for (let i = 0; i < n - 3; i++){
-        if (euclidDistance(shell[i+1], shell[i+2]) < peri / 16){
-          angle1 = getAngle(shell[i], shell[i + 1]);
-          angle2 = getAngle(shell[i + 2], shell[i + 3]);
-          console.log(angle1);
-          console.log(angle2);
-          difference = angle2 - angle1;
-          if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))){
-            let newPoint = completeAngle(shell[i], shell[i + 1], shell[i + 2], shell[i + 3])
-            shell[i + 1] = newPoint;
-            console.log("before slice");
-            console.log(JSON.parse(JSON.stringify(shell)));
-            shell.splice(i + 2, 1);
-            console.log("after slice");
-            console.log(JSON.parse(JSON.stringify(shell)));
-            i--;
-            n--;
-          }
+    /*
+    //'Fills in' small edges near corners
+    let peri = perimeter(coordinate(shell));
+    for (let i = 0; i < n - 3; i++) {
+      if (euclidDistance(shell[i + 1], shell[i + 2]) < peri / 16) {
+        angle1 = getAngle(shell[i], shell[i + 1]);
+        angle2 = getAngle(shell[i + 2], shell[i + 3]);
+        difference = angle2 - angle1;
+        if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
+          let newPoint = completeAngle(shell[i], shell[i + 1], shell[i + 2], shell[i + 3])
+          shell[i + 1] = newPoint;
+          shell.splice(i + 2, 1);
+          i--;
+          n--;
         }
       }
-      /*
+    }
     if (n < 5){
       return coordinate(shell);
     }
@@ -1466,7 +1459,7 @@ function simplifyShell(inputShell){
       if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
         let newPoint = completeAngle(shell[n - 3], shell[n - 2], shell[n - 1], shell[0])
         shell[n - 2] = newPoint;
-        shell.slice(n - 1, 1);
+        shell.splice(n - 1, 1);
         n--;
       }
     }
@@ -1480,7 +1473,7 @@ function simplifyShell(inputShell){
       if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
         let newPoint = completeAngle(shell[n - 2], shell[n - 1], shell[0], shell[1])
         shell[n - 1] = newPoint;
-        shell.slice(0, 1);
+        shell.splice(0, 1);
         n--;
       }
     }
@@ -1494,7 +1487,7 @@ function simplifyShell(inputShell){
       if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
         let newPoint = completeAngle(shell[n - 1], shell[0], shell[1], shell[2])
         shell[0] = newPoint;
-        shell.slice(1, 1);
+        shell.splice(1, 1);
         n--;
       }
     } 
@@ -1542,7 +1535,7 @@ for (let point of data){
 }
 
 shell = convexhull.makeHull(data);
-shell = simplifyShell(shell);
+shell = simplifyHull(shell);
 let y2 = [];
 let x2 = [];
 

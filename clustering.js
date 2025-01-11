@@ -39,7 +39,9 @@ console.log(`Total noise elements: ${fizzscan.noise.length}`)
 
 //var datasetCentroid = getCentroid(dataArray);
 
-let clusterRegions = region(fizzscan.clusterCentroids);
+let clusterRegions = getRegion(fizzscan.clusterCentroids);
+let clusterRegionsJudged = judgeRegion(clusterRegions);
+
 
 console.log("-------------------------")
 console.log("Individual Cluster Analysis")
@@ -61,19 +63,19 @@ for (let cluster of clusters){
   clusterObject.dataPoints = clusterData;
   console.log(`This is cluster Number ${i}`)
   clusterObject.id = i;
-  console.log(`This cluster is in the ${clusterRegions[i]} of the overall data.`);
+  console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
   clusterObject.region = clusterRegions[i];
   console.log(`This cluster is colored ${palette[i]}`);
   let area = shoelace(coordinate(clusterData));
-  let flat = flatness(convexhull.makeHull(coordinate(clusterData)))
-  let shape = judgeShape(flat);
+  let hull = convexhull.makeHull(coordinate(clusterData));
+  clusterObject.hull = hull;
+  let hullSimplified = simplifyHull(hull);
+  clusterObject.hullSimplified = hullSimplified;
+  let shape = judgeShape(clusterData);
   console.log(`The shape of the data is ${shape}`)
   clusterObject.shape = shape;
   let density = cluster.length / area;
   clusterObject.density = density;
-
-
-
 
 
 
@@ -85,7 +87,7 @@ for (let cluster of clusters){
 
   let angles =[];
   for (let j = 0; j < clusters.length; j++){
-    let angle = judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
+    let angle = getAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
     angles.push(angle);
     clusterObject.relations.push({
       "id": closest[j],
@@ -179,7 +181,7 @@ const canvas = document.getElementById("myCanvas");
         clusterData.push(dataArray[point]);
       }
       let shell = convexhull.makeHull(coordinate(clusterData));
-      shell = simplifyShell(shell);
+      shell = simplifyHull(shell);
       ctx.beginPath();
       ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
       for (let point of shell){
@@ -338,21 +340,55 @@ function flatness(data){
   return 2*Math.sqrt(shoelace(data)*Math.PI)/perimeter(data);
 }
 
-function judgeShape(flatness){
-  if (flatness > .9){
+function judgeShape(data){
+  let h = convexhull.makeHull(coordinate(data));
+  let flat = flatness(h);
+  if (flat > .9){
     return "roughly circular";
   }
-  else if (flatness > .6){
+  else if (flat > .6){
+    let simple = deCoordinate(simplifyHull(h));
+    let sides = simple.length;
+    switch (true){
+      case sides == 3:
+        return "triangle";
+      case sides == 4:
+        let angle1 = getAngle(simple[0], simple[1]);
+        let angle2 = getAngle(simple[1], simple[2]);
+        let angle3 = getAngle(simple[2], simple[3]);
+        let angle4 = getAngle(simple[3], simple[0]);
+        let difference1 = angle3 - angle1;
+        let difference2 = angle4 - angle2;
+        console.log(angle1, angle2, angle3, angle4)
+        console.log(difference1, difference2);
+        if ((Math.abs(angle1 - angle3) < 10) && (Math.abs(angle2 - angle4) < 10)){
+          if ((Math.abs(angle1 - angle3) < 10) && (Math.abs(angle2 - angle4) < 10)){
+
+          }
+        }
+    }
     return "irregular";
   }
   else{
-    return "roughly linear";
+    let xData = [];
+    let yData = [];
+    for (let i = 0; i < data.length; i++){
+      xData.push(data[i][0]);
+      yData.push(data[i][1]);
+    }
+    let slope = lin_reg(xData, yData)[1];
+    switch (true){
+      case slope > 5 || slope < -5:
+        return "roughly linear: vertical";
+      case slope > .2:
+        return "roughly linear: positively correlated";
+      case slope < .2 && slope > -.2:
+        return "roughly linear: horizontal";
+      case slope < -.2:
+        return "roughly linear: negatively correlated";
+    }
   }
 }
-
-
-
-
 
 
 function deCoordinate(array){
@@ -458,7 +494,7 @@ var trace1 = [{
 Plotly.newPlot(TESTER2, trace1)
 }
 
-function region(data){
+function getRegion(data){
   //Classifies datapoints into one of 9 regions (3x3) and returns an array of strings describing those regions.
 
   let regions = [];
@@ -490,35 +526,82 @@ function region(data){
   let test = [point[0] < left , point[0]< right, point[1] < down, point[1] < up];
     switch (true) {
       case JSON.stringify(test) == JSON.stringify([true, true, true, true]) :
-           regions.push("bottom left");
+           //regions.push("bottom left");
+           regions.push(0);
            break;
       case JSON.stringify(test) == JSON.stringify([false, true, true, true]) :
-           regions.push("bottom center");
+           //regions.push("bottom center");
+           regions.push(1);
            break;
       case JSON.stringify(test) == JSON.stringify([false, false, true, true]) :
-           regions.push("bottom right");
+           //regions.push("bottom right");
+           regions.push(2);
            break;
       case JSON.stringify(test) == JSON.stringify([true, true, false, true]) :
-           regions.push("left");
+           //regions.push("left");
+           regions.push(3);
            break;
       case JSON.stringify(test) == JSON.stringify([false, true, false, true]) :
-           regions.push("center");
+           //regions.push("center");
+           regions.push(4);
            break;
       case JSON.stringify(test) == JSON.stringify([false, false, false, true]) :
-           regions.push("right");
+           //regions.push("right");
+           regions.push(5);
            break;
       case JSON.stringify(test) == JSON.stringify([true, true, false, false]) :
-           regions.push("top left");
+           //regions.push("top left");
+           regions.push(6);
            break;
       case JSON.stringify(test) == JSON.stringify([false, true, false, false]) :
-           regions.push("top center");
+           //regions.push("top center");
+           regions.push(7);
            break;
       case JSON.stringify(test) == JSON.stringify([false, false, false, false]) :
+           //regions.push("top right");
+           regions.push(8);
+    }
+  }
+  return regions;
+}
+
+function judgeRegion(regionIDS){
+  let regions = [];
+  let n = data.length;
+  for (let i = 0; i < n; i++){
+    let regionID = regionIDS[i];
+    switch(true){
+      case regionID == 0:
+           regions.push("bottom left");
+           break;
+      case regionID == 1:
+           regions.push("bottom center");
+           break;
+      case regionID == 2:
+           regions.push("bottom right");
+           break;
+      case regionID == 3:
+           regions.push("left");
+           break;
+      case regionID == 4:
+           regions.push("center");
+           break;
+      case regionID == 5:
+           regions.push("right");
+           break;
+      case regionID == 6:
+           regions.push("top left");
+           break;
+      case regionID == 7:
+           regions.push("top center");
+           break;
+      case regionID == 8:
            regions.push("top right");
     }
   }
   return regions;
 }
+
 
 function getAngle(x, y){
   const subtraction = y.map((num, index) => num - x[index]);
@@ -594,7 +677,7 @@ function mostFrequent(arr) {
   return res;
 }
 
-function simplifyShell(inputShell){
+function simplifyHull(inputShell){
   let shell = deCoordinate(inputShell);
   let n = shell.length;
   let precision = 15;
@@ -602,98 +685,36 @@ function simplifyShell(inputShell){
   let angle2 = 0;
   let difference = 0;
   //Trims vertices from the shell which change the angle of the incoming line by less than precision degrees
-  for (let i = 0; i < n - 2; i++){
-      angle1 = getAngle(shell[i], shell[i + 1]);
-      angle2 = getAngle(shell[i + 1], shell[i + 2]);
+  for (let i = 0; i < n; i++){
+      angle1 = getAngle(shell[i % n], shell[(i + 1) % n]);
+      angle2 = getAngle(shell[(i + 1) % n], shell[(i + 2) % n]);
       difference = angle2 - angle1;
-      if ((-1*precision < difference && difference < precision) || (-1* precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)){
-          shell.splice(i + 1, 1);
+      if ((Math.abs(difference) < precision) || (Math.abs(difference + 360) < precision) || (Math.abs(difference - 360) < precision)){
+          shell.splice((i + 1) % n, 1);
           i--;
           n--;
       }
   }   
 
-  angle1 = getAngle(shell[n - 2], shell[n - 1]);
-  angle2 = getAngle(shell[n - 1], shell[0]);
-  difference = angle2 - angle1;
-  if ((-1 * precision < difference && difference < precision) || (-1 * precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)) {
-    shell.splice(n-1, 1);
-    n--;
-  }
-
-  angle1 = getAngle(shell[n - 1], shell[0]);
-  angle2 = getAngle(shell[0], shell[1]);
-  difference = angle2 - angle1;
-  if ((-1 * precision < difference && difference < precision) || (-1 * precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)) {
-    shell.splice(0, 1);
-    n--;
-  }
-
+  //'Fills in' small edges near corners
   let peri = perimeter(coordinate(shell));
-  console.log(JSON.parse(JSON.stringify(shell)));
-  console.log("perimeter");
-  console.log(peri / 16);
-  for (let i = 0; i < n - 3; i++) {
-    if (euclidDistance(shell[i + 1], shell[i + 2]) < peri / 16) {
-      angle1 = getAngle(shell[i], shell[i + 1]);
-      angle2 = getAngle(shell[i + 2], shell[i + 3]);
+  for (let i = 0; i < n; i++) {
+    if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / 16)) {
+      angle1 = getAngle(shell[i % n], shell[(i + 1) % n]);
+      angle2 = getAngle(shell[(i + 2) % n], shell[(i + 3) % n]);
       difference = angle2 - angle1;
-      if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-        let newPoint = completeAngle(shell[i], shell[i + 1], shell[i + 2], shell[i + 3])
-        shell[i + 1] = newPoint;
-        shell.splice(i + 2, 1);
+      if (!(160 < ((difference + 720) % 360) && ((difference + 720) % 360) < 200)) {
+        let newPoint = completeAngle(shell[i % n], shell[(i + 1) % n], shell[(i + 2) % n], shell[(i + 3) % n])
+        shell[(i + 1) % n] = newPoint;
+        shell.splice((i + 2) % n, 1);
         i--;
         n--;
-        console.log("after change")
-        console.log(JSON.parse(JSON.stringify(shell)));
       }
     }
   }
-  if (n < 5){
-    return coordinate(shell);
-  }
-
-  if (euclidDistance(shell[n - 2], shell[n - 1]) < peri / 16) {
-    angle1 = getAngle(shell[n - 3], shell[n - 2]);
-    angle2 = getAngle(shell[n - 1], shell[0]);
-    difference = angle2 - angle1;
-    if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-      let newPoint = completeAngle(shell[n - 3], shell[n - 2], shell[n - 1], shell[0])
-      shell[n - 2] = newPoint;
-      shell.splice(n - 1, 1);
-      n--;
-    }
-  }
-  if (n < 5){
-    return coordinate(shell);
-  }
-  if (euclidDistance(shell[n - 1], shell[0]) < peri / 16) {
-    angle1 = getAngle(shell[n - 2], shell[n - 1]);
-    angle2 = getAngle(shell[0], shell[1]);
-    difference = angle2 - angle1;
-    if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-      let newPoint = completeAngle(shell[n - 2], shell[n - 1], shell[0], shell[1])
-      shell[n - 1] = newPoint;
-      shell.splice(0, 1);
-      n--;
-    }
-  }
-  if (n < 5){
-    return coordinate(shell);
-  }
-  if (euclidDistance(shell[0], shell[1]) < peri / 16) {
-    angle1 = getAngle(shell[n - 1], shell[0]);
-    angle2 = getAngle(shell[1], shell[2]);
-    difference = angle2 - angle1;
-    if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-      let newPoint = completeAngle(shell[n - 1], shell[0], shell[1], shell[2])
-      shell[0] = newPoint;
-      shell.splice(1, 1);
-      n--;
-    }
-  } 
   return coordinate(shell);    
 }
+
 
 function completeAngle(p1, p2, p3, p4){
   //Calculates and returns the intersection point of the lines bridging p1-p2 and p3-p4.
@@ -721,5 +742,68 @@ function completeAngle(p1, p2, p3, p4){
   let x = (p1[1] - p3[1] - slope12 * p1[0] + slope34 * p3[0]) / (slope34 - slope12);
   let newPoint = [x, slope12 * x + p1[1] - slope12 * p1[0]];
   return newPoint;
-  }
+}
   
+function lin_reg(x, y) {
+    //Get slope and intercept from x and y arrays.  
+    let x_sum = 0;
+    let y_sum = 0;
+    let xy_sum = 0;
+    let x2_sum = 0;
+    const n = x.length;
+    let i = 0;
+    for (i = 0; i < n; i++) {
+        let x_val = x[i];
+        let y_val = y[i];
+        x_sum += x_val;
+        y_sum += y_val;
+        xy_sum += x_val * y_val;
+        x2_sum += x_val * x_val;
+    }
+    let slope = (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum);
+    let intercept = (y_sum / n) - slope * (x_sum / n);
+    return [intercept, slope];
+}
+
+function residuals(x, y) {
+    //Get residuals from x and y arrays from a simple linear regression.
+    let lin = lin_reg(x, y);
+    let slope = lin[1];
+    let intercept = lin[0];
+    let residuals = [];
+    let i = 0;
+    const n = x.length;
+    for (i = 0; i < n; i++) {
+        residuals.push(y[i] - (x[i] * slope + intercept))
+    }
+    return residuals;
+}
+
+function mean(x) {
+    //Get mean of array
+    let i = 0;
+    let sum = 0;
+    const n = x.length;
+    for (i = 0; i < n; i++) {
+        sum += x[i]
+    }
+    return sum / n;
+}
+
+function rSquared(x, y) {
+    //Calculates R^2 of x and y arrays from a simple linear regression.
+    if (x.length != y.length){
+        return "Error: Array lengths do not match";
+    }
+    let resid = residuals(x, y)
+    let squared_resid_sum = 0;
+    let sum_of_squares_total = 0;
+    let y_mean = mean(y);
+    let i = 0;
+    const n = x.length;
+    for (i = 0; i < n; i++) {
+        squared_resid_sum += resid[i] ** 2;
+        sum_of_squares_total += (y[i] - y_mean) ** 2
+    }
+    return (squared_resid_sum / sum_of_squares_total);
+}
