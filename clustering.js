@@ -607,10 +607,16 @@ function getAngle(x, y){
   const subtraction = y.map((num, index) => num - x[index]);
   let angle = 0;
   if (subtraction[0] == 0 && subtraction[1] > 0){
-    angle = Math.PI / 2
+    return 90;
   }
-  else if (subtraction[0] == 0 && subtraction[1] > 0){
-    angle = -Math.PI / 2
+  else if (subtraction[0] == 0 && subtraction[1] < 0){
+    return 270;
+  }
+  else if (subtraction[1] == 0 && subtraction[0] >= 0){
+      return 0
+  }
+  else if (subtraction[1] == 0 && subtraction[0] < 0){
+      return 180
   }
   else {
     
@@ -636,6 +642,7 @@ function getAngle(x, y){
   angle = angle * 180 / Math.PI;
   return angle;
 }
+
 
 function judgeAngle(x, y){
   angle = getAngle(x,y);

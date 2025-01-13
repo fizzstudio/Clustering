@@ -5,10 +5,8 @@ var Plotly = require('plotly.js-dist')
 
 var data1 = [{x:1,y:0}, {x:.707,y:.707}, {x:0,y:1}, {x:-.707,y:.707}, {x:-1,y:0},{x:-.707,y:-.707}, {x:0,y:-1}, {x:.707,y:-.707}];
 var data2 = [{x:0,y:0}, {x:1,y:1}, {x:2,y:2}, {x:-3,y:3}, {x:4,y:4},{x:5,y:5}, {x:6,y:6}, {x:7,y:7}]
-console.log(shoelace(data1));
-console.log(shoelace(data2));
 
-*/
+
 
 var data = coordinate([
     [
@@ -1308,6 +1306,9 @@ var data = coordinate([
         622938
     ]
 ]);
+*/
+//var data = coordinate([[-1 ,0], [0, 1], [1, 0], [0, -1]]);
+var data = coordinate([[0,0], [0,1], [1,1], [1,0]])
 function euclidDistance(p, q) {
   //Returns euclidean distance between vectors p and q.
   var sum = 0;
@@ -1319,21 +1320,28 @@ function euclidDistance(p, q) {
 
   return Math.sqrt(sum);
 };
-function coordinate(array){
-  var dataArray = [];
-  for (let i = 0; i < array.length; i++) {
-    dataArray.push({x : array[i][0], y : array[i][1]})
-  }
-  return dataArray;
+function coordinate(array) {
+    //Adds x-y coordinates to arrays
+    if (!(Array.isArray(array[0]))) {
+        return array;
+    }
+    var dataArray = [];
+    for (let i = 0; i < array.length; i++) {
+        dataArray.push({ x: array[i][0], y: array[i][1] })
+    }
+    return dataArray;
 }
 function deCoordinate(array){
     //Removes x-y coordinates from arrays
+    if (Array.isArray(array[0])){
+        return array;
+      }  
     var dataArray = [];
     for (let i = 0; i < array.length; i++) {
       dataArray.push([array[i]["x"], array[i]["y"]])
     }
     return dataArray;
-  }
+}
 function shoelace(data){
   let sum = 0;
   let n = data.length;
@@ -1344,6 +1352,26 @@ function shoelace(data){
   return Math.abs(sum/2);
 }
 
+function lin_reg(x, y) {
+    //Get slope and intercept from x and y arrays.  
+    let x_sum = 0;
+    let y_sum = 0;
+    let xy_sum = 0;
+    let x2_sum = 0;
+    const n = x.length;
+    let i = 0;
+    for (i = 0; i < n; i++) {
+        let x_val = x[i];
+        let y_val = y[i];
+        x_sum += x_val;
+        y_sum += y_val;
+        xy_sum += x_val * y_val;
+        x2_sum += x_val * x_val;
+    }
+    let slope = (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum);
+    let intercept = (y_sum / n) - slope * (x_sum / n);
+    return [intercept, slope];
+}
 function perimeter(data){
   let sum = 0;
   let n = data.length;
@@ -1358,19 +1386,25 @@ function perimeter(data){
   sum += euclidDistance([data[n-1].x, data[n-1].y], [data[0].x, data[0].y])
   return sum;
 }
-/*
+
 function flatness(data){
   return 2*Math.sqrt(shoelace(data)*Math.PI)/perimeter(data);
 }
-  */
+
 function getAngle(x, y){
     const subtraction = y.map((num, index) => num - x[index]);
     let angle = 0;
     if (subtraction[0] == 0 && subtraction[1] > 0){
-      angle = Math.PI / 2
+      return 90;
     }
-    else if (subtraction[0] == 0 && subtraction[1] > 0){
-      angle = -Math.PI / 2
+    else if (subtraction[0] == 0 && subtraction[1] < 0){
+      return 270;
+    }
+    else if (subtraction[1] == 0 && subtraction[0] >= 0){
+        return 0
+    }
+    else if (subtraction[1] == 0 && subtraction[0] < 0){
+        return 180
     }
     else {
       
@@ -1395,7 +1429,7 @@ function getAngle(x, y){
     
     angle = angle * 180 / Math.PI;
     return angle;
-}
+  }
 
 function simplifyHull(inputShell){
     let shell = deCoordinate(inputShell);
@@ -1404,94 +1438,35 @@ function simplifyHull(inputShell){
     let angle1 = 0;
     let angle2 = 0;
     let difference = 0;
+
     //Trims vertices from the shell which change the angle of the incoming line by less than precision degrees
-    for (let i = 0; i < n - 2; i++){
-        angle1 = getAngle(shell[i], shell[i + 1]);
-        angle2 = getAngle(shell[i + 1], shell[i + 2]);
+    for (let i = 0; i < n; i++){
+        angle1 = getAngle(shell[i % n], shell[(i + 1) % n]);
+        angle2 = getAngle(shell[(i + 1) % n], shell[(i + 2) % n]);
         difference = angle2 - angle1;
-        if ((-1*precision < difference && difference < precision) || (-1* precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)){
-            shell.splice(i + 1, 1);
+        if ((Math.abs(difference) < precision) || (Math.abs(difference + 360) < precision) || (Math.abs(difference - 360) < precision)){
+            shell.splice((i + 1) % n, 1);
             i--;
             n--;
         }
     }   
-  
-    angle1 = getAngle(shell[n - 2], shell[n - 1]);
-    angle2 = getAngle(shell[n - 1], shell[0]);
-    difference = angle2 - angle1;
-    if ((-1 * precision < difference && difference < precision) || (-1 * precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)) {
-      shell.splice(n-1, 1);
-      n--;
-    }
-  
-    angle1 = getAngle(shell[n - 1], shell[0]);
-    angle2 = getAngle(shell[0], shell[1]);
-    difference = angle2 - angle1;
-    if ((-1 * precision < difference && difference < precision) || (-1 * precision < difference + 360 && difference + 360 < precision) || (-1 * precision < difference - 360 && difference - 360 < precision)) {
-      shell.splice(0, 1);
-      n--;
-    }
-    /*
+
     //'Fills in' small edges near corners
     let peri = perimeter(coordinate(shell));
-    for (let i = 0; i < n - 3; i++) {
-      if (euclidDistance(shell[i + 1], shell[i + 2]) < peri / 16) {
-        angle1 = getAngle(shell[i], shell[i + 1]);
-        angle2 = getAngle(shell[i + 2], shell[i + 3]);
+    for (let i = 0; i < n; i++) {
+      if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / 16)) {
+        angle1 = getAngle(shell[i % n], shell[(i + 1) % n]);
+        angle2 = getAngle(shell[(i + 2) % n], shell[(i + 3) % n]);
         difference = angle2 - angle1;
-        if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-          let newPoint = completeAngle(shell[i], shell[i + 1], shell[i + 2], shell[i + 3])
-          shell[i + 1] = newPoint;
-          shell.splice(i + 2, 1);
+        if (!(160 < ((difference + 720) % 360) && ((difference + 720) % 360) < 200)) {
+          let newPoint = completeAngle(shell[i % n], shell[(i + 1) % n], shell[(i + 2) % n], shell[(i + 3) % n])
+          shell[(i + 1) % n] = newPoint;
+          shell.splice((i + 2) % n, 1);
           i--;
           n--;
         }
       }
     }
-    if (n < 5){
-      return coordinate(shell);
-    }
-  
-    if (euclidDistance(shell[n - 2], shell[n - 1]) < peri / 16) {
-      angle1 = getAngle(shell[n - 3], shell[n - 2]);
-      angle2 = getAngle(shell[n - 1], shell[0]);
-      difference = angle2 - angle1;
-      if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-        let newPoint = completeAngle(shell[n - 3], shell[n - 2], shell[n - 1], shell[0])
-        shell[n - 2] = newPoint;
-        shell.splice(n - 1, 1);
-        n--;
-      }
-    }
-    if (n < 5){
-      return coordinate(shell);
-    }
-    if (euclidDistance(shell[n - 1], shell[0]) < peri / 16) {
-      angle1 = getAngle(shell[n - 2], shell[n - 1]);
-      angle2 = getAngle(shell[0], shell[1]);
-      difference = angle2 - angle1;
-      if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-        let newPoint = completeAngle(shell[n - 2], shell[n - 1], shell[0], shell[1])
-        shell[n - 1] = newPoint;
-        shell.splice(0, 1);
-        n--;
-      }
-    }
-    if (n < 5){
-      return coordinate(shell);
-    }
-    if (euclidDistance(shell[0], shell[1]) < peri / 16) {
-      angle1 = getAngle(shell[n - 1], shell[0]);
-      angle2 = getAngle(shell[1], shell[2]);
-      difference = angle2 - angle1;
-      if (!((160 < difference && difference < 200) || (160 < difference + 360 && difference + 360 < 200) || (160 < difference - 360 && difference - 360 < 200))) {
-        let newPoint = completeAngle(shell[n - 1], shell[0], shell[1], shell[2])
-        shell[0] = newPoint;
-        shell.splice(1, 1);
-        n--;
-      }
-    } 
-      */
     return coordinate(shell);    
   }
   
@@ -1523,7 +1498,75 @@ function simplifyHull(inputShell){
     return newPoint;
     }
 
-
+function judgeShape(data) {
+    console.log(data);
+    let h = convexhull.makeHull(data);
+    //console.log(h);
+    let flat = flatness(h);
+    //console.log(flat);
+    if (flat > .9) {
+        return "roughly circular";
+    }
+    else if (flat > .6) {
+        let simple = deCoordinate(simplifyHull(h));
+        //console.log(JSON.parse(JSON.stringify(simple)));
+        let sides = simple.length;
+        switch (true) {
+            case sides == 3:
+                return "triangular";
+            case sides == 4:
+                let angle1 = getAngle(simple[0], simple[1]);
+                let angle2 = getAngle(simple[1], simple[2]);
+                let angle3 = getAngle(simple[2], simple[3]);
+                let angle4 = getAngle(simple[3], simple[0]);
+                let difference1 = angle2 - angle1;
+                let difference2 = angle3 - angle2;
+                let difference3 = angle4 - angle3;
+                let difference4 = angle1- angle4;
+                console.log(angle1, angle2, angle3, angle4)
+                console.log(difference1, difference2, difference3, difference4);
+                if ((Math.abs(((difference1 + 720) % 360) - 270) < 10) && (Math.abs(((difference2 + 720) % 360) - 270) < 10) && (Math.abs(((difference3 + 720) % 360) - 270) < 10) && (Math.abs(((difference4 + 720) % 360) - 270) < 10)){
+                    let distance1 = euclidDistance(simple[0], simple[1]);
+                    let distance2 = euclidDistance(simple[1], simple[2]);
+                    let distance3 = euclidDistance(simple[2], simple[3]);
+                    let distance4 = euclidDistance(simple[3], simple[0]);
+                    let average = (distance1 + distance2 + distance3 + distance4) / 4;
+                    if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)){
+                        console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
+                        if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)){
+                            return "diamond";
+                        }
+                        else {
+                            return "square";
+                        }
+                    }
+                    else {
+                        return "rectangular";
+                    }
+                }
+        }
+        return "irregular";
+    }
+    else {
+        let xData = [];
+        let yData = [];
+        for (let i = 0; i < data.length; i++) {
+            xData.push(data[i][0]);
+            yData.push(data[i][1]);
+        }
+        let slope = lin_reg(xData, yData)[1];
+        switch (true) {
+            case slope > 5 || slope < -5:
+                return "roughly linear: vertical";
+            case slope > .2:
+                return "roughly linear: positively correlated";
+            case slope < .2 && slope > -.2:
+                return "roughly linear: horizontal";
+            case slope < -.2:
+                return "roughly linear: negatively correlated";
+        }
+    }
+}
 
 
 let y = [];
@@ -1564,8 +1607,6 @@ var trace2 = {
 let temp = [trace1, trace2];
 Plotly.newPlot(TESTER2, temp);
 
-console.log(perimeter(data));
-console.log(data);
+
+console.log(judgeShape(data));
 //console.log(flatness(convexhull.makeHull(data)));
-
-
