@@ -25,7 +25,8 @@ let newPoint = [x, slope12 * x + p1[1] - slope12 * p1[0]];
 return newPoint;
 }
 
-let test = completeAngle([0,1], [.25, 1.25], [1.5, .5], [2,0]);
-console.log((15 + 360) % 180);
-console.log((195 + 360) % 180);
-console.log((-165 + 360) % 180);
+let test = [0, 1, 2, 3, 4]
+let cloneTest = [...test.slice(0, 2), ...test.slice(2)];
+cloneTest.splice(1, 1);
+console.log(cloneTest);
+console.log(test);

@@ -50,8 +50,8 @@ console.log("-------------------------")
 
 
 let masterArray = [];
+let densitySorted = [];
 let i = 0;
-let mostDense = [0,0];
 const palette = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 for (let cluster of clusters){
   let clusterObject = {};
@@ -88,23 +88,16 @@ for (let cluster of clusters){
   let angles =[];
   for (let j = 0; j < clusters.length; j++){
     let angle = getAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
+    let card =  judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
     angles.push(angle);
     clusterObject.relations.push({
       "id": closest[j],
       "distance": distances[j],
-      "angle": angle
+      "angle": angle,
+      "cardDirection": card
     })
   }
-  clusterObject.isMostDense = false;
   masterArray.push(clusterObject);
-
-  if (density > mostDense[1]){
-    mostDense[1] = density;
-    masterArray[mostDense[0]].isMostDense = false;
-    masterArray[i].isMostDense = true;
-    mostDense[0] = i;
-  }
-
   console.log(clusterObject);
   /*
   console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
@@ -113,15 +106,77 @@ for (let cluster of clusters){
   `)
   */
   console.log("-------------------------");
-  
   i++;
 }
+
+densitySorted = masterArray.toSorted((a, b) => {
+  return a.density - b.density;
+})
+for (let cluster of masterArray){
+cluster.densityRank = densitySorted.indexOf(cluster);
+}
+
+i = 0;
+j = 0;
+
+//Designates "neighbors" of each cluster
+neighborParameter = 1.2
+for (let cluster of fizzscan.clusterCentroids){
+  j = 0;
+  for (let target of fizzscan.clusterCentroids){
+    let cloneCentroids = [];
+    if (i == j){
+      masterArray[i].relations[0].isNeighbor = true;
+      j++;
+    }
+    else {
+      if (i < j){
+        cloneCentroids = [...fizzscan.clusterCentroids.slice(0, i), ...fizzscan.clusterCentroids.slice(i + 1)];
+        cloneCentroids.splice(j - 1, 1);
+      }
+      if (i > j){
+        cloneCentroids = [...fizzscan.clusterCentroids.slice(0, j), ...fizzscan.clusterCentroids.slice(j + 1)];
+        cloneCentroids.splice(i - 1, 1);
+      }
+  
+      let directDistance = euclidDistance(cluster, target);
+      let branchDistances = [];
+      for (let branch of cloneCentroids){
+        branchDistances.push(euclidDistance(cluster, branch) + euclidDistance(branch, target));
+      }
+      let targetRelation = {};
+      for (relation of masterArray[i].relations){
+        if (relation.id == j){
+          targetRelation = relation;  
+        }
+      }
+      if (Math.min(...branchDistances) < neighborParameter * directDistance){
+        masterArray[i].relations[masterArray[i].relations.indexOf(targetRelation)].isNeighbor = false;
+      }
+      else{
+        masterArray[i].relations[masterArray[i].relations.indexOf(targetRelation)].isNeighbor = true;
+      }
+      j++;
+    }
+    
+  }
+  i++;
+}
+
+
+
+
+console.log(masterArray);
 console.log("stop");
+
+
+
+
+
+//Draws the main graph
 
 var precision = 50;
 generateHeatmap(dataArray, precision);
-
-//Draws the main graph
 
 const canvas = document.getElementById("myCanvas");
     const ctx = canvas.getContext("2d");
@@ -129,18 +184,14 @@ const canvas = document.getElementById("myCanvas");
     canvas.width=1000;
     ctx.transform(1, 0, 0, -1, 0, canvas.height)
     
-
     const xArray = [];
     const yArray = [];
-
-
 
     for (let i = 0; i<dataArray.length; i++){
       xArray.push(dataArray[i][0]);
       yArray.push(dataArray[i][1]);
     }
     
-
     for (let i = 0; i < xArray.length-1; i++) {
       let x = xArray[i]/1000;
       let y = yArray[i]/1000;
@@ -158,8 +209,6 @@ const canvas = document.getElementById("myCanvas");
         ctx.ellipse(x, y, 4, 4, 0, 0, Math.PI * 2);
         ctx.fill();
       }
-      
-
     }
     for (let i = 0; i < fizzscan.clusterCentroids.length; i++){
       let x = fizzscan.clusterCentroids[i][0]/1000;
@@ -181,7 +230,7 @@ const canvas = document.getElementById("myCanvas");
         clusterData.push(dataArray[point]);
       }
       let shell = convexhull.makeHull(coordinate(clusterData));
-      shell = simplifyHull(shell);
+      //shell = simplifyHull(shell);
       ctx.beginPath();
       ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
       for (let point of shell){
@@ -198,10 +247,6 @@ const canvas = document.getElementById("myCanvas");
 
 
 //Helper functions
-
-
-
-
 
 
 function euclidDistance(p, q) {
@@ -340,59 +385,83 @@ function flatness(data){
   return 2*Math.sqrt(shoelace(data)*Math.PI)/perimeter(data);
 }
 
-function judgeShape(data){
+function judgeShape(data) {
+  //console.log(data);
   let h = convexhull.makeHull(coordinate(data));
+  //console.log(h);
   let flat = flatness(h);
-  if (flat > .9){
-    return "roughly circular";
+  console.log(flat);
+  if (flat > .91) {
+      return "roughly circular";
   }
-  else if (flat > .6){
-    let simple = deCoordinate(simplifyHull(h));
-    let sides = simple.length;
-    switch (true){
-      case sides == 3:
-        return "triangle";
-      case sides == 4:
-        let angle1 = getAngle(simple[0], simple[1]);
-        let angle2 = getAngle(simple[1], simple[2]);
-        let angle3 = getAngle(simple[2], simple[3]);
-        let angle4 = getAngle(simple[3], simple[0]);
-        let difference1 = angle3 - angle1;
-        let difference2 = angle4 - angle2;
-        console.log(angle1, angle2, angle3, angle4)
-        console.log(difference1, difference2);
-        if ((Math.abs(angle1 - angle3) < 10) && (Math.abs(angle2 - angle4) < 10)){
-          if ((Math.abs(angle1 - angle3) < 10) && (Math.abs(angle2 - angle4) < 10)){
-
-          }
-        }
-    }
-    return "irregular";
+  else if (flat > .7) {
+      let simple = deCoordinate(simplifyHull(h));
+      //console.log(JSON.parse(JSON.stringify(simple)));
+      let sides = simple.length;
+      switch (true) {
+          case sides == 3:
+              return "triangular";
+          case sides == 4:
+              let angle1 = getAngle(simple[0], simple[1]);
+              let angle2 = getAngle(simple[1], simple[2]);
+              let angle3 = getAngle(simple[2], simple[3]);
+              let angle4 = getAngle(simple[3], simple[0]);
+              let difference1 = angle2 - angle1;
+              let difference2 = angle3 - angle2;
+              let difference3 = angle4 - angle3;
+              let difference4 = angle1- angle4;
+              //console.log(angle1, angle2, angle3, angle4)
+              //console.log(difference1, difference2, difference3, difference4);
+              if ((Math.abs(((difference1 + 720) % 360) - 270) < 10) && (Math.abs(((difference2 + 720) % 360) - 270) < 10) && (Math.abs(((difference3 + 720) % 360) - 270) < 10) && (Math.abs(((difference4 + 720) % 360) - 270) < 10)){
+                  let distance1 = euclidDistance(simple[0], simple[1]);
+                  let distance2 = euclidDistance(simple[1], simple[2]);
+                  let distance3 = euclidDistance(simple[2], simple[3]);
+                  let distance4 = euclidDistance(simple[3], simple[0]);
+                  let average = (distance1 + distance2 + distance3 + distance4) / 4;
+                  if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)){
+                      //console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
+                      if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)){
+                          return "diamond";
+                      }
+                      else {
+                          return "square";
+                      }
+                  }
+                  else {
+                      return "rectangular";
+                  }
+              }
+          case sides == 5:
+            return "pentagon";    
+      }
+      return "irregular";
   }
-  else{
-    let xData = [];
-    let yData = [];
-    for (let i = 0; i < data.length; i++){
-      xData.push(data[i][0]);
-      yData.push(data[i][1]);
-    }
-    let slope = lin_reg(xData, yData)[1];
-    switch (true){
-      case slope > 5 || slope < -5:
-        return "roughly linear: vertical";
-      case slope > .2:
-        return "roughly linear: positively correlated";
-      case slope < .2 && slope > -.2:
-        return "roughly linear: horizontal";
-      case slope < -.2:
-        return "roughly linear: negatively correlated";
-    }
+  else {
+      let xData = [];
+      let yData = [];
+      for (let i = 0; i < data.length; i++) {
+          xData.push(data[i][0]);
+          yData.push(data[i][1]);
+      }
+      let slope = lin_reg(xData, yData)[1];
+      switch (true) {
+          case slope > 5 || slope < -5:
+              return "roughly linear: vertical";
+          case slope > .2:
+              return "roughly linear: positively correlated";
+          case slope < .2 && slope > -.2:
+              return "roughly linear: horizontal";
+          case slope < -.2:
+              return "roughly linear: negatively correlated";
+      }
   }
 }
 
-
 function deCoordinate(array){
   //Removes x-y coordinates from arrays
+  if (Array.isArray(array[0])){
+      return array;
+    }  
   var dataArray = [];
   for (let i = 0; i < array.length; i++) {
     dataArray.push([array[i]["x"], array[i]["y"]])
@@ -400,11 +469,14 @@ function deCoordinate(array){
   return dataArray;
 }
 
-function coordinate(array){
+function coordinate(array) {
   //Adds x-y coordinates to arrays
+  if (!(Array.isArray(array[0]))) {
+      return array;
+  }
   var dataArray = [];
   for (let i = 0; i < array.length; i++) {
-    dataArray.push({x : array[i][0], y : array[i][1]})
+      dataArray.push({ x: array[i][0], y: array[i][1] })
   }
   return dataArray;
 }
