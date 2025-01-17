@@ -72,7 +72,7 @@ for (let cluster of clusters){
   let hullSimplified = simplifyHull(hull);
   clusterObject.hullSimplified = hullSimplified;
   let shape = judgeShape(clusterData);
-  console.log(`The shape of the data is ${shape}`)
+  console.log(`The shape of the data is ${shape.description}`)
   clusterObject.shape = shape;
   let density = cluster.length / area;
   clusterObject.density = density;
@@ -168,9 +168,6 @@ for (let cluster of fizzscan.clusterCentroids){
 
 console.log(masterArray);
 console.log("stop");
-
-
-
 
 
 //Draws the main graph
@@ -391,16 +388,19 @@ function judgeShape(data) {
   //console.log(h);
   let flat = flatness(h);
   console.log(flat);
-  if (flat > .91) {
-      return "roughly circular";
+  if (flat > .92) {
+      return {description: "roughly circular",
+        radius: Math.sqrt(shoelace(h) / Math.PI)
+      };
   }
   else if (flat > .7) {
       let simple = deCoordinate(simplifyHull(h));
-      //console.log(JSON.parse(JSON.stringify(simple)));
       let sides = simple.length;
       switch (true) {
           case sides == 3:
-              return "triangular";
+              return {description: "triangular",
+                averageSideLength: (euclidDistance(simple[0], simple[1]) + euclidDistance(simple[1], simple[2]) + euclidDistance(simple[2], simple[0])) / 3
+              };
           case sides == 4:
               let angle1 = getAngle(simple[0], simple[1]);
               let angle2 = getAngle(simple[1], simple[2]);
@@ -411,8 +411,8 @@ function judgeShape(data) {
               let difference3 = angle4 - angle3;
               let difference4 = angle1- angle4;
               //console.log(angle1, angle2, angle3, angle4)
-              //console.log(difference1, difference2, difference3, difference4);
-              if ((Math.abs(((difference1 + 720) % 360) - 270) < 10) && (Math.abs(((difference2 + 720) % 360) - 270) < 10) && (Math.abs(((difference3 + 720) % 360) - 270) < 10) && (Math.abs(((difference4 + 720) % 360) - 270) < 10)){
+              console.log(difference1, difference2, difference3, difference4);
+              if ((Math.abs(((difference1 + 720) % 360) - 270) < 15) && (Math.abs(((difference2 + 720) % 360) - 270) < 15) && (Math.abs(((difference3 + 720) % 360) - 270) < 15) && (Math.abs(((difference4 + 720) % 360) - 270) < 15)){
                   let distance1 = euclidDistance(simple[0], simple[1]);
                   let distance2 = euclidDistance(simple[1], simple[2]);
                   let distance3 = euclidDistance(simple[2], simple[3]);
@@ -421,20 +421,26 @@ function judgeShape(data) {
                   if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)){
                       //console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
                       if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)){
-                          return "diamond";
+                          return {description: "diamond"};
                       }
                       else {
-                          return "square";
+                          return {description: "square"};
                       }
                   }
                   else {
-                      return "rectangular";
+                      return {description: "rectangular"};
                   }
               }
+              else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20 && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20){
+                return {description: "parallelogram"};
+              }
+              else {
+                return {description: "irregular quadrilateral"};
+              }
           case sides == 5:
-            return "pentagon";    
+            return {description: "pentagon"};
       }
-      return "irregular";
+      return {description: "irregular"};
   }
   else {
       let xData = [];
@@ -446,13 +452,17 @@ function judgeShape(data) {
       let slope = lin_reg(xData, yData)[1];
       switch (true) {
           case slope > 5 || slope < -5:
-              return "roughly linear: vertical";
+              return {description: "roughly linear: vertical",
+                slope: slope}
           case slope > .2:
-              return "roughly linear: positively correlated";
+            return {description: "roughly linear: positively correlated",
+              slope: slope}
           case slope < .2 && slope > -.2:
-              return "roughly linear: horizontal";
+            return {description: "roughly linear: horizontal",
+              slope: slope}
           case slope < -.2:
-              return "roughly linear: negatively correlated";
+            return {description: "roughly linear: negatively correlated",
+              slope: slope}
       }
   }
 }
