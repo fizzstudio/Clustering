@@ -9,1307 +9,7 @@ var data2 = [{x:0,y:0}, {x:1,y:1}, {x:2,y:2}, {x:-3,y:3}, {x:4,y:4},{x:5,y:5}, {
 
 
 
-var data = coordinate([
-    [
-        340693,
-        569371
-    ],
-    [
-        349296,
-        557688
-    ],
-    [
-        339967,
-        562602
-    ],
-    [
-        342064,
-        570045
-    ],
-    [
-        330455,
-        568758
-    ],
-    [
-        339981,
-        565418
-    ],
-    [
-        338342,
-        566864
-    ],
-    [
-        338474,
-        563350
-    ],
-    [
-        334354,
-        578047
-    ],
-    [
-        334016,
-        562797
-    ],
-    [
-        343247,
-        564376
-    ],
-    [
-        330881,
-        579058
-    ],
-    [
-        339115,
-        566863
-    ],
-    [
-        345840,
-        561591
-    ],
-    [
-        334549,
-        579199
-    ],
-    [
-        337811,
-        558454
-    ],
-    [
-        340545,
-        568654
-    ],
-    [
-        331667,
-        570387
-    ],
-    [
-        332960,
-        569308
-    ],
-    [
-        345042,
-        566973
-    ],
-    [
-        334182,
-        558498
-    ],
-    [
-        335328,
-        562880
-    ],
-    [
-        337298,
-        565486
-    ],
-    [
-        335918,
-        566525
-    ],
-    [
-        330127,
-        570072
-    ],
-    [
-        334785,
-        565575
-    ],
-    [
-        326152,
-        563230
-    ],
-    [
-        345903,
-        561314
-    ],
-    [
-        352520,
-        566829
-    ],
-    [
-        341675,
-        560197
-    ],
-    [
-        344770,
-        570309
-    ],
-    [
-        336829,
-        562228
-    ],
-    [
-        342963,
-        582232
-    ],
-    [
-        338860,
-        561151
-    ],
-    [
-        343376,
-        575709
-    ],
-    [
-        338863,
-        563107
-    ],
-    [
-        338935,
-        567577
-    ],
-    [
-        344237,
-        573700
-    ],
-    [
-        328657,
-        564864
-    ],
-    [
-        340712,
-        563178
-    ],
-    [
-        344791,
-        578536
-    ],
-    [
-        341721,
-        576427
-    ],
-    [
-        341578,
-        558672
-    ],
-    [
-        331987,
-        568997
-    ],
-    [
-        341329,
-        565571
-    ],
-    [
-        334350,
-        556417
-    ],
-    [
-        330482,
-        571217
-    ],
-    [
-        338950,
-        572545
-    ],
-    [
-        325958,
-        573367
-    ],
-    [
-        348171,
-        569251
-    ],
-    [
-        342099,
-        561508
-    ],
-    [
-        327998,
-        571265
-    ],
-    [
-        337889,
-        558031
-    ],
-    [
-        340032,
-        561740
-    ],
-    [
-        338634,
-        564414
-    ],
-    [
-        351459,
-        565704
-    ],
-    [
-        336928,
-        557412
-    ],
-    [
-        343450,
-        570659
-    ],
-    [
-        331616,
-        565089
-    ],
-    [
-        354529,
-        573677
-    ],
-    [
-        331366,
-        567311
-    ],
-    [
-        340191,
-        567638
-    ],
-    [
-        338583,
-        563529
-    ],
-    [
-        338474,
-        564151
-    ],
-    [
-        338205,
-        566246
-    ],
-    [
-        342901,
-        582886
-    ],
-    [
-        347966,
-        563506
-    ],
-    [
-        346144,
-        560472
-    ],
-    [
-        329905,
-        579935
-    ],
-    [
-        330335,
-        568221
-    ],
-    [
-        341559,
-        562163
-    ],
-    [
-        341925,
-        569393
-    ],
-    [
-        332586,
-        566187
-    ],
-    [
-        330750,
-        561657
-    ],
-    [
-        337910,
-        562252
-    ],
-    [
-        336549,
-        565597
-    ],
-    [
-        343717,
-        559909
-    ],
-    [
-        345164,
-        579614
-    ],
-    [
-        340970,
-        564831
-    ],
-    [
-        347575,
-        565576
-    ],
-    [
-        338753,
-        563384
-    ],
-    [
-        345495,
-        579864
-    ],
-    [
-        350056,
-        566657
-    ],
-    [
-        350283,
-        559840
-    ],
-    [
-        335525,
-        567445
-    ],
-    [
-        351815,
-        574947
-    ],
-    [
-        341966,
-        561987
-    ],
-    [
-        334983,
-        572690
-    ],
-    [
-        336336,
-        563145
-    ],
-    [
-        335027,
-        565050
-    ],
-    [
-        332270,
-        556288
-    ],
-    [
-        339640,
-        561426
-    ],
-    [
-        338633,
-        563504
-    ],
-    [
-        336974,
-        563207
-    ],
-    [
-        337173,
-        557853
-    ],
-    [
-        333378,
-        557892
-    ],
-    [
-        344552,
-        554676
-    ],
-    [
-        351564,
-        573155
-    ],
-    [
-        338084,
-        560295
-    ],
-    [
-        345674,
-        579033
-    ],
-    [
-        345123,
-        577788
-    ],
-    [
-        329859,
-        564384
-    ],
-    [
-        353939,
-        570931
-    ],
-    [
-        344096,
-        575522
-    ],
-    [
-        359831,
-        554975
-    ],
-    [
-        340064,
-        550509
-    ],
-    [
-        358793,
-        547046
-    ],
-    [
-        358483,
-        554925
-    ],
-    [
-        357275,
-        551101
-    ],
-    [
-        354746,
-        552404
-    ],
-    [
-        356246,
-        549756
-    ],
-    [
-        361370,
-        552483
-    ],
-    [
-        359772,
-        568428
-    ],
-    [
-        363304,
-        553764
-    ],
-    [
-        360165,
-        553303
-    ],
-    [
-        358312,
-        559466
-    ],
-    [
-        352209,
-        548608
-    ],
-    [
-        357679,
-        548036
-    ],
-    [
-        335999,
-        549795
-    ],
-    [
-        358384,
-        556361
-    ],
-    [
-        356865,
-        545785
-    ],
-    [
-        352424,
-        557574
-    ],
-    [
-        335029,
-        553213
-    ],
-    [
-        361138,
-        551307
-    ],
-    [
-        341016,
-        545280
-    ],
-    [
-        353583,
-        554147
-    ],
-    [
-        327738,
-        559624
-    ],
-    [
-        331175,
-        551842
-    ],
-    [
-        331440,
-        551885
-    ],
-    [
-        330767,
-        552963
-    ],
-    [
-        325125,
-        564342
-    ],
-    [
-        324952,
-        565867
-    ],
-    [
-        325871,
-        558965
-    ],
-    [
-        325883,
-        560492
-    ],
-    [
-        353979,
-        578923
-    ],
-    [
-        353145,
-        580916
-    ],
-    [
-        343997,
-        585193
-    ],
-    [
-        348773,
-        583528
-    ],
-    [
-        355924,
-        577596
-    ],
-    [
-        321312,
-        574721
-    ],
-    [
-        325057,
-        581121
-    ],
-    [
-        326043,
-        553772
-    ],
-    [
-        321519,
-        561045
-    ],
-    [
-        325118,
-        556212
-    ],
-    [
-        324442,
-        567881
-    ],
-    [
-        320628,
-        564596
-    ],
-    [
-        317136,
-        563479
-    ],
-    [
-        324093,
-        580491
-    ],
-    [
-        321905,
-        573147
-    ],
-    [
-        321517,
-        569562
-    ],
-    [
-        321309,
-        569996
-    ],
-    [
-        321910,
-        573825
-    ],
-    [
-        315850,
-        573154
-    ],
-    [
-        324032,
-        577807
-    ],
-    [
-        316313,
-        570785
-    ],
-    [
-        318823,
-        565345
-    ],
-    [
-        321216,
-        569834
-    ],
-    [
-        324440,
-        567074
-    ],
-    [
-        328586,
-        551385
-    ],
-    [
-        337002,
-        589527
-    ],
-    [
-        339288,
-        588052
-    ],
-    [
-        341966,
-        586266
-    ],
-    [
-        335201,
-        585318
-    ],
-    [
-        327403,
-        548875
-    ],
-    [
-        326251,
-        549298
-    ],
-    [
-        318065,
-        581616
-    ],
-    [
-        324055,
-        590810
-    ],
-    [
-        347522,
-        587567
-    ],
-    [
-        339993,
-        544064
-    ],
-    [
-        338588,
-        543875
-    ],
-    [
-        330145,
-        546705
-    ],
-    [
-        357813,
-        572855
-    ],
-    [
-        317331,
-        556086
-    ],
-    [
-        316642,
-        553340
-    ],
-    [
-        310944,
-        559497
-    ],
-    [
-        365927,
-        571713
-    ],
-    [
-        366688,
-        562413
-    ],
-    [
-        364844,
-        571623
-    ],
-    [
-        347197,
-        591316
-    ],
-    [
-        353335,
-        592567
-    ],
-    [
-        352381,
-        592377
-    ],
-    [
-        344314,
-        595915
-    ],
-    [
-        335792,
-        541310
-    ],
-    [
-        322209,
-        547247
-    ],
-    [
-        333669,
-        542228
-    ],
-    [
-        327695,
-        543105
-    ],
-    [
-        366794,
-        582584
-    ],
-    [
-        366934,
-        581294
-    ],
-    [
-        367751,
-        578289
-    ],
-    [
-        315965,
-        587160
-    ],
-    [
-        332116,
-        594868
-    ],
-    [
-        328331,
-        541094
-    ],
-    [
-        367048,
-        553451
-    ],
-    [
-        371563,
-        547746
-    ],
-    [
-        373894,
-        555347
-    ],
-    [
-        371000,
-        555062
-    ],
-    [
-        368617,
-        554066
-    ],
-    [
-        373907,
-        558472
-    ],
-    [
-        365567,
-        547606
-    ],
-    [
-        369366,
-        561201
-    ],
-    [
-        367641,
-        556309
-    ],
-    [
-        365058,
-        545456
-    ],
-    [
-        339632,
-        536577
-    ],
-    [
-        333934,
-        537464
-    ],
-    [
-        339212,
-        538693
-    ],
-    [
-        336787,
-        538925
-    ],
-    [
-        341446,
-        538787
-    ],
-    [
-        350117,
-        535859
-    ],
-    [
-        349955,
-        535578
-    ],
-    [
-        374117,
-        546122
-    ],
-    [
-        350798,
-        535657
-    ],
-    [
-        375619,
-        553791
-    ],
-    [
-        371616,
-        570648
-    ],
-    [
-        374695,
-        563163
-    ],
-    [
-        333901,
-        532836
-    ],
-    [
-        344239,
-        530765
-    ],
-    [
-        332884,
-        533990
-    ],
-    [
-        312386,
-        555195
-    ],
-    [
-        340383,
-        600071
-    ],
-    [
-        321657,
-        538660
-    ],
-    [
-        303637,
-        570253
-    ],
-    [
-        304157,
-        566007
-    ],
-    [
-        304556,
-        568584
-    ],
-    [
-        304086,
-        576100
-    ],
-    [
-        302583,
-        571881
-    ],
-    [
-        333299,
-        597586
-    ],
-    [
-        326627,
-        534442
-    ],
-    [
-        327973,
-        534972
-    ],
-    [
-        316395,
-        537403
-    ],
-    [
-        357737,
-        597104
-    ],
-    [
-        344437,
-        529492
-    ],
-    [
-        328438,
-        532686
-    ],
-    [
-        331795,
-        529654
-    ],
-    [
-        306298,
-        551902
-    ],
-    [
-        304399,
-        545221
-    ],
-    [
-        297110,
-        556485
-    ],
-    [
-        298665,
-        568245
-    ],
-    [
-        300366,
-        565761
-    ],
-    [
-        370259,
-        585265
-    ],
-    [
-        378648,
-        579579
-    ],
-    [
-        379388,
-        567285
-    ],
-    [
-        352220,
-        602793
-    ],
-    [
-        366478,
-        594677
-    ],
-    [
-        322365,
-        530808
-    ],
-    [
-        378697,
-        591764
-    ],
-    [
-        318681,
-        528806
-    ],
-    [
-        321924,
-        527106
-    ],
-    [
-        385183,
-        556284
-    ],
-    [
-        331340,
-        524203
-    ],
-    [
-        386377,
-        574187
-    ],
-    [
-        388806,
-        569524
-    ],
-    [
-        324516,
-        522674
-    ],
-    [
-        302353,
-        545544
-    ],
-    [
-        319927,
-        524637
-    ],
-    [
-        310041,
-        533285
-    ],
-    [
-        296775,
-        572432
-    ],
-    [
-        299578,
-        572052
-    ],
-    [
-        294310,
-        563522
-    ],
-    [
-        297022,
-        574097
-    ],
-    [
-        289087,
-        565427
-    ],
-    [
-        290107,
-        571927
-    ],
-    [
-        289176,
-        571435
-    ],
-    [
-        292932,
-        558293
-    ],
-    [
-        303269,
-        531608
-    ],
-    [
-        313649,
-        523765
-    ],
-    [
-        302359,
-        534317
-    ],
-    [
-        363956,
-        609339
-    ],
-    [
-        368724,
-        598412
-    ],
-    [
-        320827,
-        519618
-    ],
-    [
-        293746,
-        544468
-    ],
-    [
-        297212,
-        546223
-    ],
-    [
-        289423,
-        559134
-    ],
-    [
-        286568,
-        547471
-    ],
-    [
-        283570,
-        563726
-    ],
-    [
-        288068,
-        561932
-    ],
-    [
-        282066,
-        560178
-    ],
-    [
-        282430,
-        560217
-    ],
-    [
-        284031,
-        566654
-    ],
-    [
-        384922,
-        582877
-    ],
-    [
-        393570,
-        579641
-    ],
-    [
-        312558,
-        520650
-    ],
-    [
-        308966,
-        523409
-    ],
-    [
-        392534,
-        593343
-    ],
-    [
-        385091,
-        599401
-    ],
-    [
-        306346,
-        523584
-    ],
-    [
-        296763,
-        528676
-    ],
-    [
-        276703,
-        559740
-    ],
-    [
-        275524,
-        559548
-    ],
-    [
-        293591,
-        522132
-    ],
-    [
-        292636,
-        520371
-    ],
-    [
-        283474,
-        532727
-    ],
-    [
-        277027,
-        536847
-    ],
-    [
-        396903,
-        591235
-    ],
-    [
-        407040,
-        577739
-    ],
-    [
-        404420,
-        577532
-    ],
-    [
-        400380,
-        588221
-    ],
-    [
-        386373,
-        606623
-    ],
-    [
-        405542,
-        600089
-    ],
-    [
-        286990,
-        529505
-    ],
-    [
-        289002,
-        520678
-    ],
-    [
-        285152,
-        520229
-    ],
-    [
-        262846,
-        559590
-    ],
-    [
-        280110,
-        522025
-    ],
-    [
-        281979,
-        518199
-    ],
-    [
-        279008,
-        521035
-    ],
-    [
-        265815,
-        540385
-    ],
-    [
-        408689,
-        562521
-    ],
-    [
-        413894,
-        564459
-    ],
-    [
-        411796,
-        581307
-    ],
-    [
-        419151,
-        577335
-    ],
-    [
-        415881,
-        584352
-    ],
-    [
-        409616,
-        575024
-    ],
-    [
-        412500,
-        594675
-    ],
-    [
-        412767,
-        593558
-    ],
-    [
-        410917,
-        614521
-    ],
-    [
-        411008,
-        607342
-    ],
-    [
-        403004,
-        613466
-    ],
-    [
-        257984,
-        555707
-    ],
-    [
-        259173,
-        548593
-    ],
-    [
-        269126,
-        508814
-    ],
-    [
-        261538,
-        525920
-    ],
-    [
-        260096,
-        530550
-    ],
-    [
-        404782,
-        557913
-    ],
-    [
-        405652,
-        622938
-    ]
-]);
-*/
-//var data = coordinate([[-1 ,0], [0, 1], [1, 0], [0, -1]]);
-var data = coordinate([
+var data = var data = coordinate([
     [
         664159,
         550946
@@ -2511,6 +1211,9 @@ var data = coordinate([
         537542
     ]
 ])
+*/
+//var data = coordinate([[-1 ,0], [0, 1], [1, 0], [0, -1]]);
+var data = coordinate([[0 ,0], [1, 1], [3, 1], [2,0]]);
 var dataArray = deCoordinate(data);
 let distAvg = [];
 let master = [];
@@ -2749,75 +1452,129 @@ function simplifyHull(inputShell){
     return newPoint;
     }
 
-function judgeShape(data) {
-    console.log(data);
-    let h = convexhull.makeHull(data);
-    //console.log(h);
-    let flat = flatness(h);
-    //console.log(flat);
-    if (flat > .9) {
-        return "roughly circular";
-    }
-    else if (flat > .6) {
-        let simple = deCoordinate(simplifyHull(h));
-        //console.log(JSON.parse(JSON.stringify(simple)));
-        let sides = simple.length;
-        switch (true) {
-            case sides == 3:
-                return "triangular";
-            case sides == 4:
-                let angle1 = getAngle(simple[0], simple[1]);
-                let angle2 = getAngle(simple[1], simple[2]);
-                let angle3 = getAngle(simple[2], simple[3]);
-                let angle4 = getAngle(simple[3], simple[0]);
-                let difference1 = angle2 - angle1;
-                let difference2 = angle3 - angle2;
-                let difference3 = angle4 - angle3;
-                let difference4 = angle1- angle4;
-                console.log(angle1, angle2, angle3, angle4)
-                console.log(difference1, difference2, difference3, difference4);
-                if ((Math.abs(((difference1 + 720) % 360) - 270) < 10) && (Math.abs(((difference2 + 720) % 360) - 270) < 10) && (Math.abs(((difference3 + 720) % 360) - 270) < 10) && (Math.abs(((difference4 + 720) % 360) - 270) < 10)){
-                    let distance1 = euclidDistance(simple[0], simple[1]);
-                    let distance2 = euclidDistance(simple[1], simple[2]);
-                    let distance3 = euclidDistance(simple[2], simple[3]);
-                    let distance4 = euclidDistance(simple[3], simple[0]);
-                    let average = (distance1 + distance2 + distance3 + distance4) / 4;
-                    if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)){
-                        console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
-                        if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)){
-                            return "diamond";
-                        }
-                        else {
-                            return "square";
-                        }
-                    }
-                    else {
-                        return "rectangular";
-                    }
-                }
+    function judgeShape(data) {
+        //console.log(data);
+        let h = convexhull.makeHull(coordinate(data));
+        //console.log(h);
+        let flat = flatness(h);
+        console.log(flat);
+        if (flat > .92) {
+          return {
+            description: "roughly circular",
+            radius: Math.sqrt(shoelace(h) / Math.PI)
+          };
         }
-        return "irregular";
-    }
-    else {
-        let xData = [];
-        let yData = [];
-        for (let i = 0; i < data.length; i++) {
+        else if (flat > .7) {
+          let simple = deCoordinate(simplifyHull(h));
+          let sides = simple.length;
+          switch (true) {
+            case sides == 3:
+              return {
+                description: "triangular",
+                averageSideLength: (euclidDistance(simple[0], simple[1]) + euclidDistance(simple[1], simple[2]) + euclidDistance(simple[2], simple[0])) / 3
+              };
+            case sides == 4:
+              let angle1 = getAngle(simple[0], simple[1]);
+              let angle2 = getAngle(simple[1], simple[2]);
+              let angle3 = getAngle(simple[2], simple[3]);
+              let angle4 = getAngle(simple[3], simple[0]);
+              let difference1 = angle2 - angle1;
+              let difference2 = angle3 - angle2;
+              let difference3 = angle4 - angle3;
+              let difference4 = angle1 - angle4;
+              //console.log(angle1, angle2, angle3, angle4)
+              //console.log(difference1, difference2, difference3, difference4);
+              if ((Math.abs(((difference1 + 720) % 360) - 270) < 15) && (Math.abs(((difference2 + 720) % 360) - 270) < 15) && (Math.abs(((difference3 + 720) % 360) - 270) < 15) && (Math.abs(((difference4 + 720) % 360) - 270) < 15)) {
+                let distance1 = euclidDistance(simple[0], simple[1]);
+                let distance2 = euclidDistance(simple[1], simple[2]);
+                let distance3 = euclidDistance(simple[2], simple[3]);
+                let distance4 = euclidDistance(simple[3], simple[0]);
+                let average = (distance1 + distance2 + distance3 + distance4) / 4;
+                if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)) {
+                  //console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
+                  if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)) {
+                    return { description: "diamond" };
+                  }
+                  else {
+                    return { description: "square" };
+                  }
+                }
+                else {
+                  return { description: "rectangular" };
+                }
+              }
+              else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20 && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20) {
+                return { description: "parallelogram" };
+              }
+              else {
+                return { description: "irregular quadrilateral" };
+              }
+            case sides == 5:
+              return { description: "pentagon" };
+            case sides > 5:
+              let xData = [];
+              let yData = [];
+              for (let i = 0; i < data.length; i++) {
+                xData.push(data[i][0]);
+                yData.push(data[i][1]);
+              }
+              let slope = lin_reg(xData, yData)[1];
+              switch (true) {
+                case slope > 5 || slope < -5:
+                  return {
+                    description: "elliptical: vertical",
+                    slope: slope
+                  }
+                case slope > .2:
+                  return {
+                    description: "elliptical: positively correlated",
+                    slope: slope
+                  }
+                case slope < .2 && slope > -.2:
+                  return {
+                    description: "elliptical: horizontal",
+                    slope: slope
+                  }
+                case slope < -.2:
+                  return {
+                    description: "elliptical: negatively correlated",
+                    slope: slope
+                  }
+              }
+          }
+        }
+        else {
+          let xData = [];
+          let yData = [];
+          for (let i = 0; i < data.length; i++) {
             xData.push(data[i][0]);
             yData.push(data[i][1]);
-        }
-        let slope = lin_reg(xData, yData)[1];
-        switch (true) {
+          }
+          let slope = lin_reg(xData, yData)[1];
+          switch (true) {
             case slope > 5 || slope < -5:
-                return "roughly linear: vertical";
+              return {
+                description: "roughly linear: vertical",
+                slope: slope
+              }
             case slope > .2:
-                return "roughly linear: positively correlated";
+              return {
+                description: "roughly linear: positively correlated",
+                slope: slope
+              }
             case slope < .2 && slope > -.2:
-                return "roughly linear: horizontal";
+              return {
+                description: "roughly linear: horizontal",
+                slope: slope
+              }
             case slope < -.2:
-                return "roughly linear: negatively correlated";
+              return {
+                description: "roughly linear: negatively correlated",
+                slope: slope
+              }
+          }
         }
-    }
-}
+      }
 
 
 let y = [];
@@ -2859,5 +1616,5 @@ let temp = [trace1, trace2];
 Plotly.newPlot(TESTER2, temp);
 
 
-console.log(judgeShape(data));
+console.log(judgeShape(data).description);
 //console.log(flatness(convexhull.makeHull(data)));

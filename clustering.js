@@ -1,5 +1,4 @@
-//var s1 = require('./s1.js')
-//console.log(s1.data);
+
 var clustering = require('./node_modules/density-clustering');
 const silhouette = require('@robzzson/silhouette');
 var csv2json = require('csvjson-csv2json');
@@ -11,12 +10,17 @@ for (let i = 0; i < data.length; i++) {
   dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
 }
 
+
+
 //distAvg averges out the nearest neighbor distances over each point in the set
 let distAvg = [];
 let master = [];
+const start = Date.now();
 for (let i = 0; i < dataArray.length; i++) {
   master.push(nNDistances(dataArray, i))
 }
+console.log(`Time elapsed: ${Date.now() - start} ms`);
+
 for (let i = 0; i < dataArray.length; i++) {
   let sum = 0;
   for (let j = 0; j < dataArray.length; j++) {
@@ -29,8 +33,12 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 
 let minPts = 4;
 
+
+
 var fizzscan = new clustering.FIZZSCAN();
 var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
+
+
 console.log(clusters, fizzscan.noise);
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
@@ -65,6 +73,7 @@ for (let cluster of clusters){
   clusterObject.id = i;
   console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
   clusterObject.region = clusterRegions[i];
+  clusterObject.regionDesc = clusterRegionsJudged[i];
   console.log(`This cluster is colored ${palette[i]}`);
   let area = shoelace(coordinate(clusterData));
   let hull = convexhull.makeHull(coordinate(clusterData));
@@ -142,7 +151,9 @@ for (let cluster of fizzscan.clusterCentroids){
       let directDistance = euclidDistance(cluster, target);
       let branchDistances = [];
       for (let branch of cloneCentroids){
-        branchDistances.push(euclidDistance(cluster, branch) + euclidDistance(branch, target));
+        if (euclidDistance(cluster, branch) < euclidDistance(cluster, target)){
+          branchDistances.push(euclidDistance(cluster, branch) + euclidDistance(branch, target));
+        }
       }
       let targetRelation = {};
       for (relation of masterArray[i].relations){
@@ -158,11 +169,9 @@ for (let cluster of fizzscan.clusterCentroids){
       }
       j++;
     }
-    
   }
   i++;
 }
-
 
 
 
@@ -173,7 +182,8 @@ console.log("stop");
 //Draws the main graph
 
 var precision = 50;
-generateHeatmap(dataArray, precision);
+//generateHeatmap(dataArray, precision);
+
 
 const canvas = document.getElementById("myCanvas");
     const ctx = canvas.getContext("2d");
@@ -250,23 +260,26 @@ function euclidDistance(p, q) {
   //Returns euclidean distance between vectors p and q.
   var sum = 0;
   var i = Math.min(p.length, q.length);
-
   while (i--) {
     sum += (p[i] - q[i]) * (p[i] - q[i]);
   }
-
+  
   return Math.sqrt(sum);
 };
 
 function nNDistances(dataset, pointId) {
   //Returns list of distances from nearest neighbors for a point, sorted low to high.
+  const start = Date.now();
   var distances = [];
   for (var id = 0; id < dataset.length; id++) {
     var dist = euclidDistance(dataset[pointId], dataset[id]);
     distances.push(dist);
   }
+  let typedArray = Float32Array.from(distances)
+  typedArray.sort((a, b) => { return a - b; });
+  //distances.sort((a, b) => { return a - b; });
+  return typedArray;
   
-  return distances.sort((a, b) => { return a - b; });
 };
 
 function nNIndices(dataset, pointId) {
@@ -389,81 +402,120 @@ function judgeShape(data) {
   let flat = flatness(h);
   console.log(flat);
   if (flat > .92) {
-      return {description: "roughly circular",
-        radius: Math.sqrt(shoelace(h) / Math.PI)
-      };
+    return {
+      description: "roughly circular",
+      radius: Math.sqrt(shoelace(h) / Math.PI)
+    };
   }
   else if (flat > .7) {
-      let simple = deCoordinate(simplifyHull(h));
-      let sides = simple.length;
-      switch (true) {
-          case sides == 3:
-              return {description: "triangular",
-                averageSideLength: (euclidDistance(simple[0], simple[1]) + euclidDistance(simple[1], simple[2]) + euclidDistance(simple[2], simple[0])) / 3
-              };
-          case sides == 4:
-              let angle1 = getAngle(simple[0], simple[1]);
-              let angle2 = getAngle(simple[1], simple[2]);
-              let angle3 = getAngle(simple[2], simple[3]);
-              let angle4 = getAngle(simple[3], simple[0]);
-              let difference1 = angle2 - angle1;
-              let difference2 = angle3 - angle2;
-              let difference3 = angle4 - angle3;
-              let difference4 = angle1- angle4;
-              //console.log(angle1, angle2, angle3, angle4)
-              console.log(difference1, difference2, difference3, difference4);
-              if ((Math.abs(((difference1 + 720) % 360) - 270) < 15) && (Math.abs(((difference2 + 720) % 360) - 270) < 15) && (Math.abs(((difference3 + 720) % 360) - 270) < 15) && (Math.abs(((difference4 + 720) % 360) - 270) < 15)){
-                  let distance1 = euclidDistance(simple[0], simple[1]);
-                  let distance2 = euclidDistance(simple[1], simple[2]);
-                  let distance3 = euclidDistance(simple[2], simple[3]);
-                  let distance4 = euclidDistance(simple[3], simple[0]);
-                  let average = (distance1 + distance2 + distance3 + distance4) / 4;
-                  if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)){
-                      //console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
-                      if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)){
-                          return {description: "diamond"};
-                      }
-                      else {
-                          return {description: "square"};
-                      }
-                  }
-                  else {
-                      return {description: "rectangular"};
-                  }
-              }
-              else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20 && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20){
-                return {description: "parallelogram"};
-              }
-              else {
-                return {description: "irregular quadrilateral"};
-              }
-          case sides == 5:
-            return {description: "pentagon"};
-      }
-      return {description: "irregular"};
-  }
-  else {
-      let xData = [];
-      let yData = [];
-      for (let i = 0; i < data.length; i++) {
+    let simple = deCoordinate(simplifyHull(h));
+    let sides = simple.length;
+    switch (true) {
+      case sides == 3:
+        return {
+          description: "triangular",
+          averageSideLength: (euclidDistance(simple[0], simple[1]) + euclidDistance(simple[1], simple[2]) + euclidDistance(simple[2], simple[0])) / 3
+        };
+      case sides == 4:
+        let angle1 = getAngle(simple[0], simple[1]);
+        let angle2 = getAngle(simple[1], simple[2]);
+        let angle3 = getAngle(simple[2], simple[3]);
+        let angle4 = getAngle(simple[3], simple[0]);
+        let difference1 = angle2 - angle1;
+        let difference2 = angle3 - angle2;
+        let difference3 = angle4 - angle3;
+        let difference4 = angle1 - angle4;
+        //console.log(angle1, angle2, angle3, angle4)
+        //console.log(difference1, difference2, difference3, difference4);
+        if ((Math.abs(((difference1 + 720) % 360) - 270) < 15) && (Math.abs(((difference2 + 720) % 360) - 270) < 15) && (Math.abs(((difference3 + 720) % 360) - 270) < 15) && (Math.abs(((difference4 + 720) % 360) - 270) < 15)) {
+          let distance1 = euclidDistance(simple[0], simple[1]);
+          let distance2 = euclidDistance(simple[1], simple[2]);
+          let distance3 = euclidDistance(simple[2], simple[3]);
+          let distance4 = euclidDistance(simple[3], simple[0]);
+          let average = (distance1 + distance2 + distance3 + distance4) / 4;
+          if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)) {
+            //console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
+            if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)) {
+              return { description: "diamond" };
+            }
+            else {
+              return { description: "square" };
+            }
+          }
+          else {
+            return { description: "rectangular" };
+          }
+        }
+        else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20 && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20) {
+          return { description: "parallelogram" };
+        }
+        else {
+          return { description: "irregular quadrilateral" };
+        }
+      case sides == 5:
+        return { description: "pentagon" };
+      case sides > 5:
+        let xData = [];
+        let yData = [];
+        for (let i = 0; i < data.length; i++) {
           xData.push(data[i][0]);
           yData.push(data[i][1]);
-      }
-      let slope = lin_reg(xData, yData)[1];
-      switch (true) {
+        }
+        let slope = lin_reg(xData, yData)[1];
+        switch (true) {
           case slope > 5 || slope < -5:
-              return {description: "roughly linear: vertical",
-                slope: slope}
+            return {
+              description: "elliptical: vertical",
+              slope: slope
+            }
           case slope > .2:
-            return {description: "roughly linear: positively correlated",
-              slope: slope}
+            return {
+              description: "elliptical: positively correlated",
+              slope: slope
+            }
           case slope < .2 && slope > -.2:
-            return {description: "roughly linear: horizontal",
-              slope: slope}
+            return {
+              description: "elliptical: horizontal",
+              slope: slope
+            }
           case slope < -.2:
-            return {description: "roughly linear: negatively correlated",
-              slope: slope}
-      }
+            return {
+              description: "elliptical: negatively correlated",
+              slope: slope
+            }
+        }
+    }
+  }
+  else {
+    let xData = [];
+    let yData = [];
+    for (let i = 0; i < data.length; i++) {
+      xData.push(data[i][0]);
+      yData.push(data[i][1]);
+    }
+    let slope = lin_reg(xData, yData)[1];
+    switch (true) {
+      case slope > 5 || slope < -5:
+        return {
+          description: "roughly linear: vertical",
+          slope: slope
+        }
+      case slope > .2:
+        return {
+          description: "roughly linear: positively correlated",
+          slope: slope
+        }
+      case slope < .2 && slope > -.2:
+        return {
+          description: "roughly linear: horizontal",
+          slope: slope
+        }
+      case slope < -.2:
+        return {
+          description: "roughly linear: negatively correlated",
+          slope: slope
+        }
+    }
   }
 }
 
@@ -896,3 +948,5 @@ function rSquared(x, y) {
     }
     return (squared_resid_sum / sum_of_squares_total);
 }
+
+
