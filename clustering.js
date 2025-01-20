@@ -10,28 +10,31 @@ for (let i = 0; i < data.length; i++) {
   dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
 }
 
-
+let minPts = 4;
 
 //distAvg averges out the nearest neighbor distances over each point in the set
 let distAvg = [];
-let master = [];
+let distanceStorage = [];
 const start = Date.now();
 for (let i = 0; i < dataArray.length; i++) {
-  master.push(nNDistances(dataArray, i))
+  distanceStorage.push(nNDistancesSpecial(dataArray, i, minPts))
+  //distanceStorage.push(nNDistances(dataArray, i))
 }
 console.log(`Time elapsed: ${Date.now() - start} ms`);
+
+console.log(distanceStorage);
+
+
 
 for (let i = 0; i < dataArray.length; i++) {
   let sum = 0;
   for (let j = 0; j < dataArray.length; j++) {
-  sum += master[j][i];
+  sum += distanceStorage[j][i];
 }
 distAvg.push(sum)
 }
 distAvg = distAvg.map((x) => x / dataArray.length)
 
-
-let minPts = 4;
 
 
 
@@ -39,7 +42,7 @@ var fizzscan = new clustering.FIZZSCAN();
 var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
 
 
-console.log(clusters, fizzscan.noise);
+console.log(clusters, fizzscan.noise, fizzscan.noiseAssigned);
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
 console.log(`Total clustered elements: ${clusters.flat().length}`)
@@ -277,10 +280,55 @@ function nNDistances(dataset, pointId) {
   }
   let typedArray = Float32Array.from(distances)
   typedArray.sort((a, b) => { return a - b; });
-  //distances.sort((a, b) => { return a - b; });
   return typedArray;
   
 };
+
+function nNDistancesSpecial(dataset, pointId, minPts) {
+  //Returns list of distances from nearest neighbors for a point, sorted low to high.
+  const start = Date.now();
+  var distances = [];
+  for (var id = 0; id < dataset.length; id++) {
+    var dist = euclidDistance(dataset[pointId], dataset[id]);
+    distances.push(dist);
+  }
+  let typedArray = Float32Array.from(distances)
+  if (minPts < 100) return partialSort(typedArray, 2 * minPts);
+  else return typedArray.sort((a, b) => { return a - b; });;  
+};
+
+
+function bisect(items, x, lo, hi) {
+  var mid;
+  if (typeof(lo) == 'undefined') lo = 0;
+  if (typeof(hi) == 'undefined') hi = items.length;
+  while (lo < hi) {
+    mid = Math.floor((lo + hi) / 2);
+    if (x < items[mid]) hi = mid;
+    else lo = mid + 1;
+  }
+  return lo;
+}
+
+function insort(items, x) {
+  items.splice(bisect(items, x), 0, x);
+}
+
+function partialSort(items, k) {
+  var smallest = [];
+  for (var i = 0, len = items.length; i < len; ++i) {
+    var item = items[i];
+    if (smallest.length < k || item < smallest[smallest.length - 1]) {
+      insort(smallest, item);
+      if (smallest.length > k)
+        smallest.splice(k, 1);
+    }
+  }
+  return smallest;
+}
+
+
+
 
 function nNIndices(dataset, pointId) {
   //Returns list of nearest indices to a point, sorted low to high, including the point itself.

@@ -1,5 +1,3 @@
-let test = {a: "A", b: "B"
-}
-test[c] = "C";
-console.log(test.a);
-console.log(test.c);
+let test = ["A", "B", "C", "D", "E"]
+test[1] = test[test.length - 1];
+console.log(test);
