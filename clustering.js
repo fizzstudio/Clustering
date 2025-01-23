@@ -1,10 +1,10 @@
-
-var clustering = require('./node_modules/density-clustering');
-const silhouette = require('@robzzson/silhouette');
+//const silhouette = require('@robzzson/silhouette');
 var csv2json = require('csvjson-csv2json');
 var Plotly = require('plotly.js-dist');
-
+var classifyPoint = require("robust-point-in-polygon");
 const data = csv2json(s1Data);
+
+
 let dataArray = [];
 for (let i = 0; i < data.length; i++) {
   dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
@@ -15,14 +15,10 @@ let minPts = 4;
 //distAvg averges out the nearest neighbor distances over each point in the set
 let distAvg = [];
 let distanceStorage = [];
-const start = Date.now();
+
 for (let i = 0; i < dataArray.length; i++) {
   distanceStorage.push(nNDistancesSpecial(dataArray, i, minPts))
-  //distanceStorage.push(nNDistances(dataArray, i))
 }
-console.log(`Time elapsed: ${Date.now() - start} ms`);
-
-console.log(distanceStorage);
 
 
 
@@ -38,7 +34,7 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 
 
 
-var fizzscan = new clustering.FIZZSCAN();
+var fizzscan = new FIZZSCAN();
 var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
 
 
@@ -72,6 +68,28 @@ for (let cluster of clusters){
   }
   //console.log(clusterData);
   clusterObject.dataPoints = clusterData;
+  let xMin = clusterData[0][0];
+  let xMax = clusterData[0][0];
+  let yMin = clusterData[0][1];
+  let yMax = clusterData[0][1];
+  for (let point of clusterData){
+    if (point[0] < xMin){
+      xMin = point[0];
+    }
+    if (point[0] > xMax){
+      xMax = point[0];
+    }
+    if (point[1] < yMin){
+      yMin = point[1];
+    }
+    if (point[1] > yMax){
+      yMax = point[1];
+    }
+  }
+  clusterObject.xMin = xMin;
+  clusterObject.xMax = xMax;
+  clusterObject.yMin = yMin;
+  clusterObject.yMax = yMax;
   console.log(`This is cluster Number ${i}`)
   clusterObject.id = i;
   console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
@@ -111,6 +129,7 @@ for (let cluster of clusters){
   }
   masterArray.push(clusterObject);
   console.log(clusterObject);
+  console.log(findHoles(clusterObject));
   /*
   console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
     Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
@@ -175,7 +194,6 @@ for (let cluster of fizzscan.clusterCentroids){
   }
   i++;
 }
-
 
 
 console.log(masterArray);
@@ -326,9 +344,6 @@ function partialSort(items, k) {
   }
   return smallest;
 }
-
-
-
 
 function nNIndices(dataset, pointId) {
   //Returns list of nearest indices to a point, sorted low to high, including the point itself.
@@ -905,26 +920,31 @@ function simplifyHull(inputShell){
 }
 
 
-function completeAngle(p1, p2, p3, p4){
+function completeAngle(p1, p2, p3, p4) {
   //Calculates and returns the intersection point of the lines bridging p1-p2 and p3-p4.
   //See derivation here: https://www.desmos.com/calculator/vmgoniltui If whoever's reading this has an easier way to do this let me know
 
+  if (p1.x !== undefined) { p1 = [p1.x, p1.y] }
+  if (p2.x !== undefined) { p2 = [p2.x, p2.y] }
+  if (p3.x !== undefined) { p3 = [p3.x, p3.y] }
+  if (p4.x !== undefined) { p4 = [p4.x, p4.y] }
+
   //Handles edge case when two points are aligned vertically
-  if ((p2[0]-p1[0]) == 0){
-      if ((p4[0]-p3[0]) == 0){
+  if ((p2[0] - p1[0]) == 0) {
+      if ((p4[0] - p3[0]) == 0) {
           //This should never happen if used on a convex polygon
           return -1;
       }
-      return (p4[1]-p3[1])/(p4[0]-p3[0]) * p1[0] + p3[1] - (p4[1]-p3[1])/(p4[0]-p3[0]) * p3[0];
+      return (p4[1] - p3[1]) / (p4[0] - p3[0]) * p1[0] + p3[1] - (p4[1] - p3[1]) / (p4[0] - p3[0]) * p3[0];
   }
-  
-  if ((p4[0]-p3[0]) == 0){
-      return (p2[1]-p1[1])/(p2[0]-p1[0]) * p3[0] + p1[1] - (p2[1]-p1[1])/(p2[0]-p1[0]) * p1[0];
+
+  if ((p4[0] - p3[0]) == 0) {
+      return (p2[1] - p1[1]) / (p2[0] - p1[0]) * p3[0] + p1[1] - (p2[1] - p1[1]) / (p2[0] - p1[0]) * p1[0];
   }
-  
-  let slope12 = (p2[1]-p1[1])/(p2[0]-p1[0]);
-  let slope34 = (p4[1]-p3[1])/(p4[0]-p3[0]);
-  if ((slope12 - slope34) == 0){
+
+  let slope12 = (p2[1] - p1[1]) / (p2[0] - p1[0]);
+  let slope34 = (p4[1] - p3[1]) / (p4[0] - p3[0]);
+  if ((slope12 - slope34) == 0) {
       //This should also never happen if used on a convex polygon
       return -1;
   }
@@ -998,3 +1018,77 @@ function rSquared(x, y) {
 }
 
 
+function findHoles(cluster) {
+  //Returns a list of the lar
+  let clusterData = coordinate(cluster.dataPoints);
+
+  var voronoi = new Voronoi();
+  //var bbox = { xl: 500000, xr: 750000, yt: 450000, yb: 700000 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+  var bbox = { xl: cluster.xMin - .1, xr: cluster.xMax + .1, yt: cluster.yMax + .1, yb: cluster.yMin - .1}; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+  var sites = clusterData;
+
+
+  var diagram = voronoi.compute(sites, bbox);
+  console.log(diagram);
+  let shell = convexhull.makeHull(coordinate(clusterData))
+  //var polygon = deCoordinate(shell);
+
+  let edgePoints = [];
+  let verticesInside = [];
+
+  //console.log(JSON.parse(JSON.stringify(edgePoints)));
+  for (let edge of diagram.edges) {
+    let va = [edge.va.x, edge.va.y];
+    let vb = [edge.vb.x, edge.vb.y];
+    let n = shell.length;
+    for (let i = 0; i < n; i++) {
+      let intersection = completeAngle(va, vb, shell[i % n], shell[(i + 1) % n])
+      if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0])) && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
+        edgePoints.push(intersection);
+      }
+    }
+  }
+
+
+
+  for (point of deCoordinate(diagram.vertices)) {
+    if (classifyPoint(deCoordinate(shell), point) < 1) {
+      verticesInside.push(point);
+    }
+  }
+
+
+  for (point of edgePoints) {
+    if (classifyPoint(deCoordinate(shell), point) < 1) {
+      verticesInside.push(point);
+    }
+  }
+
+
+  //console.log(JSON.parse(JSON.stringify(verticesInside)));
+
+
+  let minsArray = [];
+  for (let vertexID in verticesInside) {
+    let vertex = verticesInside[vertexID];
+    let min = [0, 0];
+    for (let point of deCoordinate(clusterData)) {
+      if (min[1] == 0) {
+        min = [vertexID, euclidDistance(vertex, point)]
+      }
+      else if (min[1] > euclidDistance(vertex, point)) {
+        min = [vertexID, euclidDistance(vertex, point)]
+      }
+    }
+    minsArray.push(min);
+  }
+
+
+  let sorted = minsArray.sort((a, b) => {return b[1] - a[1]})
+  let closest = []
+  for (let i = 0; i < 10; i++){
+    closest.push([verticesInside[sorted[i][0]], sorted[i][1]])
+  }
+
+  return(closest);
+}

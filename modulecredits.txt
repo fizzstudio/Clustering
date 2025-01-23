@@ -1,0 +1,7 @@
+density clustering (DBSCAN algorithm): https://github.com/uhho/density-clustering
+convex hull algorithm:  https://www.nayuki.io/page/convex-hull-algorithm
+converting csv to json: https://github.com/FlatFilers/csvjson-csv2json
+silhouette coefficient algorithm: https://github.com/Robzzson/silhouette-coefficient
+point in polygon algorithm: https://github.com/mikolalysenko/robust-point-in-polygon
+voronoi diagram algorithm: https://github.com/gorhill/Javascript-Voronoi
+large datasets: https://cs.joensuu.fi/sipu/datasets/
