@@ -1,3 +1,7 @@
-let test = ["A", "B", "C", "D", "E"]
-test[1] = test[test.length - 1];
-console.log(test);
+sorted
+console.log(point);
+console.log(Number(pointID) + 1);
+let i = Number(pointID) + 1;
+while (i < sorted.length) {
+    i++;
+}

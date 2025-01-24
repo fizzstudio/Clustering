@@ -35,7 +35,7 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 
 
 var fizzscan = new FIZZSCAN();
-var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, false);
+var clusters = fizzscan.run(dataArray, 2*distAvg[minPts], minPts, true);
 
 
 console.log(clusters, fizzscan.noise, fizzscan.noiseAssigned);
@@ -60,13 +60,16 @@ let masterArray = [];
 let densitySorted = [];
 let i = 0;
 const palette = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
+
+
+
+//Forms objects out of clusters, assigns properties, then adds them to a master list
 for (let cluster of clusters){
   let clusterObject = {};
   let clusterData = [];
   for (let point of cluster){
     clusterData.push(dataArray[point]);
   }
-  //console.log(clusterData);
   clusterObject.dataPoints = clusterData;
   let xMin = clusterData[0][0];
   let xMax = clusterData[0][0];
@@ -90,6 +93,10 @@ for (let cluster of clusters){
   clusterObject.xMax = xMax;
   clusterObject.yMin = yMin;
   clusterObject.yMax = yMax;
+  clusterObject.centroid = fizzscan.clusterCentroids[i];
+
+
+
   console.log(`This is cluster Number ${i}`)
   clusterObject.id = i;
   console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
@@ -106,9 +113,6 @@ for (let cluster of clusters){
   clusterObject.shape = shape;
   let density = cluster.length / area;
   clusterObject.density = density;
-
-
-
   clusterObject.relations = [];
   let closest = nNIndices(fizzscan.clusterCentroids, i);
   //clusterObject.nearestIndices = closest;
@@ -127,9 +131,28 @@ for (let cluster of clusters){
       "cardDirection": card
     })
   }
+
+  clusterObject.holes = findHoles(clusterObject);
+  let largestHole = clusterObject.holes[0];
+  let centroidDistance = euclidDistance(largestHole[0], clusterObject.centroid)
+  let deCoHull = deCoordinate(clusterObject.hull)
+  let maxDistance = euclidDistance(deCoHull[0], clusterObject.centroid);
+  for (let hullPoint of deCoHull){
+    if (maxDistance < euclidDistance(hullPoint, clusterObject.centroid)){
+      maxDistance = euclidDistance(hullPoint, clusterObject.centroid);
+    }
+  }
+  let largestHoleImportanceScore = largestHole[1] / maxDistance * (1- centroidDistance / maxDistance)
+  let holeParameter = .2;
+  if (largestHoleImportanceScore > holeParameter){
+    clusterObject.hasSignificantHole = true;
+  }
+  else{
+    clusterObject.hasSignificantHole = false;
+  }
+
   masterArray.push(clusterObject);
   console.log(clusterObject);
-  console.log(findHoles(clusterObject));
   /*
   console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
     Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
@@ -220,6 +243,7 @@ const canvas = document.getElementById("myCanvas");
       yArray.push(dataArray[i][1]);
     }
     
+    //Draws clustered points and outliers
     for (let i = 0; i < xArray.length-1; i++) {
       let x = xArray[i]/1000;
       let y = yArray[i]/1000;
@@ -238,6 +262,8 @@ const canvas = document.getElementById("myCanvas");
         ctx.fill();
       }
     }
+
+    //Draws centroids of each cluster
     for (let i = 0; i < fizzscan.clusterCentroids.length; i++){
       let x = fizzscan.clusterCentroids[i][0]/1000;
       let y = fizzscan.clusterCentroids[i][1]/1000;
@@ -252,6 +278,8 @@ const canvas = document.getElementById("myCanvas");
       ctx.stroke();
       ctx.closePath();
     }
+
+    //Draws convex hulls around each cluster
     for (let cluster of clusters){
       let clusterData = [];
       for (let point of cluster) {
@@ -268,6 +296,21 @@ const canvas = document.getElementById("myCanvas");
       ctx.lineTo(shell[0].x / 1000, shell[0].y / 1000)
       ctx.stroke();
       ctx.closePath();
+    }
+
+    //Draws largest holes of each cluster
+    for (let cluster of masterArray){
+      for (let i = 0; i < 10; i++){
+        ctx.fillStyle = palette[i];
+        ctx.beginPath();
+        ctx.ellipse(cluster.holes[i][0][0] / 1000, cluster.holes[i][0][1] / 1000, cluster.holes[i][1] / 1000, cluster.holes[i][1] / 1000, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.closePath();
+        ctx.beginPath();
+        //ctx.ellipse(cluster.holes[i][0][0] / 1000, cluster.holes[i][0][1] / 1000, 4, 4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.closePath();
+      }
     }
 
 
@@ -1023,20 +1066,16 @@ function findHoles(cluster) {
   let clusterData = coordinate(cluster.dataPoints);
 
   var voronoi = new Voronoi();
-  //var bbox = { xl: 500000, xr: 750000, yt: 450000, yb: 700000 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
   var bbox = { xl: cluster.xMin - .1, xr: cluster.xMax + .1, yt: cluster.yMax + .1, yb: cluster.yMin - .1}; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
   var sites = clusterData;
 
 
   var diagram = voronoi.compute(sites, bbox);
-  console.log(diagram);
   let shell = convexhull.makeHull(coordinate(clusterData))
-  //var polygon = deCoordinate(shell);
 
   let edgePoints = [];
   let verticesInside = [];
 
-  //console.log(JSON.parse(JSON.stringify(edgePoints)));
   for (let edge of diagram.edges) {
     let va = [edge.va.x, edge.va.y];
     let vb = [edge.vb.x, edge.vb.y];
@@ -1049,24 +1088,17 @@ function findHoles(cluster) {
     }
   }
 
-
-
   for (point of deCoordinate(diagram.vertices)) {
     if (classifyPoint(deCoordinate(shell), point) < 1) {
       verticesInside.push(point);
     }
   }
 
-
   for (point of edgePoints) {
     if (classifyPoint(deCoordinate(shell), point) < 1) {
       verticesInside.push(point);
     }
   }
-
-
-  //console.log(JSON.parse(JSON.stringify(verticesInside)));
-
 
   let minsArray = [];
   for (let vertexID in verticesInside) {
@@ -1083,10 +1115,26 @@ function findHoles(cluster) {
     minsArray.push(min);
   }
 
-
   let sorted = minsArray.sort((a, b) => {return b[1] - a[1]})
+  console.log(JSON.parse(JSON.stringify(sorted)));
+
+  //Culls similar holes by removing hole centers that lie within the border of a larger hole.
+  for (let pointID in sorted){
+    let point = sorted[pointID];
+    let i = Number(pointID) + 1;
+    while (i < sorted.length){
+      if (euclidDistance(verticesInside[point[0]], verticesInside[sorted[i][0]]) < point[1]){
+        sorted.splice(i, 1);
+        i--;
+      }
+      i++;
+    }
+  }
+
+  console.log(JSON.parse(JSON.stringify(sorted)));
+
   let closest = []
-  for (let i = 0; i < 10; i++){
+  for (let i = 0; i < sorted.length; i++){
     closest.push([verticesInside[sorted[i][0]], sorted[i][1]])
   }
 
