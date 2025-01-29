@@ -1,7 +1,2 @@
-sorted
-console.log(point);
-console.log(Number(pointID) + 1);
-let i = Number(pointID) + 1;
-while (i < sorted.length) {
-    i++;
-}
+let test = [["a", 1], ["b", 2], ["c", 3], ["d", 4]]
+console.log(test.indexOf("a"));

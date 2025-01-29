@@ -1,5 +1,3 @@
-var sneed = "chuck";
-
 /**
  * DBSCAN - Density based clustering
  *
@@ -9,7 +7,7 @@ var sneed = "chuck";
 
 
 /**
- * FIZZSCAN class construcotr
+ * FIZZSCAN class constructor
  * @constructor
  *
  * @param {Array} dataset
@@ -110,7 +108,7 @@ class FIZZSCAN {
 
     for (let clusterID in this.clusters) {
       for (let point of this.clusters[clusterID]) {
-        reverseClusterLookup[point] = clusterID;
+        reverseClusterLookup[point] = Number(clusterID);
       }
     }
 
@@ -122,10 +120,12 @@ class FIZZSCAN {
 
     //Optionally forces noise points into clusters by grouping them into the nearest already-clustered point.
     if (this.forceIn) {
+      this.noiseAssigned = JSON.parse(JSON.stringify(this.noise));
       for (let i = 0; i < tempStorage.length; i++) {
         let point = tempStorage[i];
+        this.noiseAssigned[this.noiseAssigned.indexOf(point[0])] = [point[0], point[1]];
         this._addToCluster(point[0], point[1]);
-        reverseClusterLookup[point[0]] = point[1];
+        //reverseClusterLookup[point[0]] = point[1];
       }
       this.noise = [];
     }
@@ -133,10 +133,11 @@ class FIZZSCAN {
       this.noiseAssigned = JSON.parse(JSON.stringify(this.noise));
       for (let i = 0; i < tempStorage.length; i++) {
         let point = tempStorage[i];
-        this.noiseAssigned[this.noiseAssigned.indexOf(point[0])] = [point[0], point[1]];
-        reverseClusterLookup[point[0]] = point[1];
+        this.noiseAssigned[this.noiseAssigned.indexOf(point)] = [point[0], point[1]];
+        //reverseClusterLookup[point[0]] = point[1];
       }
     }
+    console.log(reverseClusterLookup);
     return this.clusters;
   }
   /******************************************************************************/
@@ -307,26 +308,16 @@ class FIZZSCAN {
    * @access protected
    */
   _centroid(c) {
-    var centroid = [];
-    var i = 0;
-    var j = 0;
-    var l = c.length;
-    var points = [];
-    for (i = 0; i < l; i++) {
-      points.push(this.dataset[c[i]]);
+    let sumX = 0;
+    let sumY = 0;
+    const n = c.length;
+  
+    for (let i of c) {
+      sumX += this.dataset[i][0];
+      sumY += this.dataset[i][1];
     }
-    for (i = 0; i < l; i++) {
-      for (j = 0; j < points[i].length; j++) {
-        if (centroid[j] !== undefined) {
-          centroid[j] += points[i][j] / l;
-        }
-        else {
-          centroid.push(0);
-          centroid[j] += points[i][j] / l;
-        }
-      }
-    }
-    return centroid;
+  
+    return [sumX / n, sumY / n];
   }
   _nearestNeighbor(datasetIds, pointId) {
     //Given a list of clustered points and an outlier, returns the closest clustered point.
