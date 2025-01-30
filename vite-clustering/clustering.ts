@@ -1,10 +1,13 @@
 //const silhouette = require('@robzzson/silhouette');
-import { newPlot } from 'plotly.js-dist';
+//import { newPlot } from 'plotly.js-dist';
 import csv2json from 'csvjson-csv2json';
 import classifyPoint from "robust-point-in-polygon";
-import s1Data from "./s1.js";
-import makeHull from "./convexhull.ts"
-const data = csv2json(s1Data);
+//import s1Data from "./s1.js";
+import d10c from "./2d-10c.js";
+import makeHull from "./convexhull.ts";
+import { FIZZSCAN } from "./FIZZSCAN.ts";
+import Voronoi from "./rhill-voronoi-core.js";
+const data = csv2json(d10c);
 
 
 let dataArray: Array<Array<number>> = [];
@@ -45,6 +48,7 @@ console.log(`Noise:`)
 console.log(fizzscan.noise);
 console.log(`NoiseAssigned:`)
 console.log(fizzscan.noiseAssigned);
+
 console.log(`Number of clusters: ${clusters.length}`)
 console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
 console.log(`Total clustered elements: ${clusters.flat().length}`)
@@ -62,8 +66,8 @@ console.log("-------------------------")
 
 
 
-let masterArray: Array<any> = [];
-let densitySorted: Array<number> = [];
+let masterArray: Array<clusterObject> = [];
+let densitySorted: Array<clusterObject> = [];
 let i: number = 0;
 const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 
@@ -71,31 +75,31 @@ const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cya
 
 //Forms objects out of clusters, assigns properties, then adds them to a master list
 for (let cluster of clusters) {
-    let clusterObject: {
-        centroid?: Array<number>,
-        dataPoints?: Array<Array<number>>,
-        density?: number,
-        densityRank?: number,
-        hasSignificantHole?: boolean,
-        holes?: Array<any>,
-        hull?: Array<any>,
-        hullSimplified?: Array<any>,
-        id?: number,
-        region?: number,
-        regionDesc?: string,
-        relations?: Array<{
-            angle: number,
-            cardDirection: string,
-            distance: number,
-            id: number,
-            isNeighbor?: boolean
-        }>,
-        shape?: {description: string},
-        xMin?: number,
-        xMax?: number,
-        yMin?: number,
-        yMax?: number
-    } = {};
+    let clusterObject: clusterObject = {
+        centroid: [0],
+        dataPoints: [[0]],
+        density: 0,
+        densityRank: 0,
+        hasSignificantHole: false,
+        holes: [],
+        hull: [],
+        hullSimplified: [],
+        id: 0,
+        region: 0,
+        regionDesc: "",
+        relations: [{
+            angle: 0,
+            cardDirection: "",
+            distance: 0,
+            id: 0,
+            isNeighbor: false
+        }],
+        shape: {description: ""},
+        xMin: 0,
+        xMax: 0,
+        yMin: 0,
+        yMax: 0
+    };
     let clusterData: Array<Array<number>> = [];
     for (let point of cluster) {
         clusterData.push(dataArray[point]);
@@ -124,7 +128,7 @@ for (let cluster of clusters) {
     clusterObject.yMin = yMin;
     clusterObject.yMax = yMax;
     clusterObject.centroid = fizzscan.clusterCentroids[i];
-
+    
 
 
     console.log(`This is cluster Number ${i}`)
@@ -133,20 +137,20 @@ for (let cluster of clusters) {
     clusterObject.region = clusterRegions[i];
     clusterObject.regionDesc = clusterRegionsJudged[i];
     console.log(`This cluster is colored ${palette[i]}`);
-    let area = shoelace(coordinate(clusterData));
-    let hull = makeHull(coordinate(clusterData));
+    let area: number = shoelace(coordinate(clusterData));
+    let hull: Array<coord> = makeHull(coordinate(clusterData));
     clusterObject.hull = hull;
-    let hullSimplified = simplifyHull(hull);
+    let hullSimplified: Array<coord> = simplifyHull(hull);
     clusterObject.hullSimplified = hullSimplified;
     let shape: {description: string} = judgeShape(clusterData);
     console.log(`The shape of the data is ${shape.description}`)
     clusterObject.shape = shape;
-    let density = cluster.length / area;
+    let density: number = cluster.length / area;
     clusterObject.density = density;
     clusterObject.relations = [];
-    let closest = nNIndices(fizzscan.clusterCentroids, i);
+    let closest: Array<number> = nNIndices(fizzscan.clusterCentroids, i);
     //clusterObject.nearestIndices = closest;
-    let distances = nNDistances(fizzscan.clusterCentroids, i)
+    let distances: Array<number> = nNDistances(fizzscan.clusterCentroids, i)
     //clusterObject.nearestDistances = distances;
 
     let angles: Array<number> = [];
@@ -161,9 +165,8 @@ for (let cluster of clusters) {
             "cardDirection": card
         })
     }
-
     clusterObject.holes = findHoles(clusterObject);
-    let largestHole = clusterObject.holes[0];
+    let largestHole: hole = clusterObject.holes[0];
     let centroidDistance = euclidDistance(largestHole[0], clusterObject.centroid)
     let deCoHull = deCoordinate(clusterObject.hull)
     let maxDistance = euclidDistance(deCoHull[0], clusterObject.centroid);
@@ -193,21 +196,28 @@ for (let cluster of clusters) {
     console.log("-------------------------");
     i++;
 }
-let masterArrayClone: Array<any> = JSON.parse(JSON.stringify(masterArray));
+
+//Adds density rankings for each cluster to masterArray
+let masterArrayClone: Array<clusterObject> = JSON.parse(JSON.stringify(masterArray));
 densitySorted = masterArrayClone.sort((a, b) => {
     return a.density - b.density;
 })
+
+let densityIDs: Array<number> = [];
+for (let cluster of densitySorted){
+    densityIDs.push(cluster.id);
+}
 for (let cluster of masterArray) {
-    cluster.densityRank = densitySorted.indexOf(cluster);
+    cluster.densityRank = densityIDs.indexOf(cluster.id);
 }
 
-i = 0;
-let j: number = 0;
 
-//Designates "neighbors" of each cluster
+
+//Designates "neighbors" of each cluster and adds to masterArray
+i = 0;
 let neighborParameter: number = 1.2
 for (let cluster of fizzscan.clusterCentroids) {
-    j = 0;
+    let j: number = 0;
     for (let target of fizzscan.clusterCentroids) {
         let cloneCentroids: Array<Array<number>> = [];
         if (i == j) {
@@ -231,7 +241,13 @@ for (let cluster of fizzscan.clusterCentroids) {
                     branchDistances.push(euclidDistance(cluster, branch) + euclidDistance(branch, target));
                 }
             }
-            let targetRelation = {};
+            let targetRelation: relation = {
+                angle: 0,
+                cardDirection: "",
+                distance: 0,
+                id: 0,
+                isNeighbor: false
+            };
             for (let relation of masterArray[i].relations) {
                 if (relation.id == j) {
                     targetRelation = relation;
@@ -250,15 +266,12 @@ for (let cluster of fizzscan.clusterCentroids) {
 }
 
 
-console.log(masterArray);
+console.log(JSON.parse(JSON.stringify(masterArray)));
 console.log("stop");
 
 
 //Draws the main graph
-
-const precision: number = 50;
-//generateHeatmap(dataArray, precision);
-
+let graphSize: number = 1000;
 
 let canvas: HTMLCanvasElement | null = document.getElementById("myCanvas") as HTMLCanvasElement | null ;
 if (canvas == null){
@@ -271,18 +284,24 @@ canvas.height = 1000;
 canvas.width = 1000;
 ctx.transform(1, 0, 0, -1, 0, canvas.height)
 
-const xArray: Array<number> = [];
-const yArray: Array<number> = [];
+let xArray: Array<number> = [];
+let yArray: Array<number> = [];
+
 
 for (let i = 0; i < dataArray.length; i++) {
     xArray.push(dataArray[i][0]);
     yArray.push(dataArray[i][1]);
 }
+let yMax: number = Math.max(...yArray);
+let xMax: number = Math.max(...xArray);
+let yMin: number = Math.min(...yArray);
+let xMin: number = Math.min(...xArray);
 
 //Draws clustered points and outliers
 for (let i = 0; i < xArray.length - 1; i++) {
-    let x: number = xArray[i] / 1000;
-    let y: number = yArray[i] / 1000;
+    let x: number = ((xArray[i] - xMin) / (xMax-xMin)) * graphSize;
+    let y: number = ((yArray[i] - yMin) / (yMax-yMin)) * graphSize;
+
     ctx.beginPath();
     for (let j = 0; j < clusters.length; j++) {
         if (clusters[j].includes(i)) {
@@ -300,9 +319,11 @@ for (let i = 0; i < xArray.length - 1; i++) {
 }
 
 //Draws centroids of each cluster
+
+
 for (let i = 0; i < fizzscan.clusterCentroids.length; i++) {
-    let x: number = fizzscan.clusterCentroids[i][0] / 1000;
-    let y: number = fizzscan.clusterCentroids[i][1] / 1000;
+    let x: number = ((fizzscan.clusterCentroids[i][0] - xMin) / (xMax-xMin)) * graphSize;
+    let y: number = ((fizzscan.clusterCentroids[i][1] - yMin) / (yMax-yMin)) * graphSize;
     ctx.beginPath();
     ctx.fillStyle = palette[i];
     ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
@@ -324,31 +345,37 @@ for (let cluster of clusters) {
     let shell = makeHull(coordinate(clusterData));
     //shell = simplifyHull(shell);
     ctx.beginPath();
-    ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
-    for (let point of shell) {
-        ctx.lineTo(point.x / 1000, point.y / 1000);
+    ctx.moveTo(((shell[0].x - xMin) / (xMax-xMin)) * graphSize, ((shell[0].y - yMin) / (yMax-yMin)) * graphSize)
+    for (let i = 0; i < shell.length; i++){
+        let x: number = ((shell[i].x - xMin) / (xMax-xMin)) * graphSize;
+        let y: number = ((shell[i].y - yMin) / (yMax-yMin)) * graphSize;
+        ctx.lineTo(x, y);
         ctx.stroke();
     }
-    ctx.lineTo(shell[0].x / 1000, shell[0].y / 1000)
+    ctx.lineTo(((shell[0].x - xMin) / (xMax-xMin)) * graphSize, ((shell[0].y - yMin) / (yMax-yMin)) * graphSize)
     ctx.stroke();
     ctx.closePath();
+
 }
 
 //Draws largest holes of each cluster
 /*
 for (let cluster of masterArray){
-  for (let i = 0; i < 1; i++){
-    ctx.beginPath();
-    ctx.ellipse(cluster.holes[i][0][0] / 1000, cluster.holes[i][0][1] / 1000, cluster.holes[i][1] / 1000, cluster.holes[i][1] / 1000, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.closePath();
-    ctx.beginPath();
-    ctx.ellipse(cluster.holes[i][0][0] / 1000, cluster.holes[i][0][1] / 1000, 4, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.closePath();
+    for (let i = 0; i < 1; i++){
+      ctx.beginPath();
+      ctx.ellipse(((cluster.holes[i][0][0] - xMin) / (xMax-xMin)) * graphSize, ((cluster.holes[i][0][1] - yMin) / (yMax-yMin)) * graphSize, ((cluster.holes[i][1]) / (xMax-xMin)) * graphSize, ((cluster.holes[i][1]) / (xMax-xMin)) * graphSize, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.closePath();
+      ctx.beginPath();
+      ctx.ellipse(((cluster.holes[i][0][0] - xMin) / (xMax-xMin)) * graphSize, ((cluster.holes[i][0][1] - yMin) / (yMax-yMin)) * graphSize, 4, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.closePath();
+    }
   }
-}
-  */
+*/
+
+const precision: number = 50;
+//generateHeatmap(dataArray, precision);
 
 
 
@@ -517,7 +544,7 @@ function perimeter(data: Array<coord>): number {
     let sum: number = 0;
     let n: number = data.length;
     if (n < 2) {
-        return -1;
+        return 0;
     }
     if (n == 2) {
         return euclidDistance([data[0].x, data[0].y], [data[1].x, data[1].y])
@@ -537,12 +564,11 @@ function flatness(data: Array<coord>): number {
 }
 
 function judgeShape(data: Array<Array<number>>): {description: string, radius?: number, averageSideLength?: number, slope?: number} {
-    //console.log(data);
+    //Judges the 'shape' of the convex hull of a cluster of data.
     let h: Array<coord> = makeHull(coordinate(data));
-    //console.log(h);
     let flat: number = flatness(h);
-    //console.log(flat);
     if (flat > .92) {
+        //High flatness is categorized as roughly circular
         return {
             description: "roughly circular",
             radius: Math.sqrt(shoelace(h) / Math.PI)
@@ -625,6 +651,7 @@ function judgeShape(data: Array<Array<number>>): {description: string, radius?: 
         }
     }
     else {
+        //Flatness <.7 are classified as linear
         let xData: Array<number> = [];
         let yData: Array<number> = [];
         for (let i = 0; i < data.length; i++) {
@@ -676,11 +703,8 @@ function coordinate(array: Array<Array<number>>): Array<coord> {
     return dataArray;
 }
 
-
+/*
 function generateHeatmap(dataArray: Array<Array<number>>, precision: number): void {
-
-
-
 
     let y: Array<number> = [];
     let x: Array<number> = [];
@@ -760,6 +784,7 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
 
     newPlot(TESTER2, trace1)
 }
+*/
 
 function getRegion(data: Array<Array<number>>): Array<number> {
     //Classifies datapoints into one of 9 regions (3x3) and returns an array of numbers describing those regions.
@@ -970,8 +995,8 @@ function simplifyHull(inputShell: Array<coord>): Array<coord> {
 
 
 function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): Array<number> {
-    //Calculates and returns the intersection point of the lines bridging p1-p2 and p3-p4.
-    //See derivation here: https://www.desmos.com/calculator/vmgoniltui If whoever's reading this has an easier way to do this let me know
+    //Calculates and returns the intersection point of the lines spanning p1-p2 and p3-p4.
+    //See derivation here: https://www.desmos.com/calculator/vmgoniltui
     if (!Array.isArray(p1)){p1 = [p1.x, p1.y]}
     if (!Array.isArray(p2)){p2 = [p2.x, p2.y]}
     if (!Array.isArray(p3)){p3 = [p3.x, p3.y]}
@@ -1067,15 +1092,14 @@ function rSquared(x: Array<number>, y: Array<number>): number {
 }
 
 
-function findHoles(cluster: any): Array<any> {
+
+function findHoles(cluster: clusterObject): Array<hole> {
     //Returns a list of non-overlapping holes, sorted from largest to smallest.
     let clusterData: Array<coord> = coordinate(cluster.dataPoints);
 
-    var voronoi = new Voronoi();
-    var bbox = { xl: cluster.xMin - .1, xr: cluster.xMax + .1, yt: cluster.yMax + .1, yb: cluster.yMin - .1 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
-
-
-    var diagram = voronoi.compute(clusterData, bbox);
+    let voronoi = new Voronoi();
+    let bbox = { xl: cluster.xMin - .1, xr: cluster.xMax + .1, yt: cluster.yMax + .1, yb: cluster.yMin - .1 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+    let diagram = voronoi.compute(clusterData, bbox);
     let shell: Array<coord> = makeHull(clusterData)
 
     let edgePoints: Array<Array<number>> = [];
@@ -1137,7 +1161,7 @@ function findHoles(cluster: any): Array<any> {
     }
 
 
-    let closest: Array<any> = []
+    let closest: Array<hole> = []
     for (let i = 0; i < sorted.length; i++) {
         closest.push([verticesInside[sorted[i][0]], sorted[i][1]])
     }
@@ -1145,7 +1169,36 @@ function findHoles(cluster: any): Array<any> {
     return (closest);
 }
 
+
+//Types
+type clusterObject = {
+    centroid: Array<number>,
+    dataPoints: Array<Array<number>>,
+    density: number,
+    densityRank: number,
+    hasSignificantHole: boolean,
+    holes: Array<hole>,
+    hull: Array<coord>,
+    hullSimplified: Array<coord>,
+    id: number,
+    region: number,
+    regionDesc: string,
+    relations: Array<relation>,
+    shape: {description: string},
+    xMin: number,
+    xMax: number,
+    yMin: number,
+    yMax: number
+}
 type coord = {
     x: number,
     y: number
 }
+type relation = {
+    angle: number,
+    cardDirection: string,
+    distance: number,
+    id: number,
+    isNeighbor?: boolean
+}
+type hole = [Array<number>, number]

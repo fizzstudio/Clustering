@@ -45,7 +45,7 @@ class FIZZSCAN {
       this.forceIn = false;
       /** @type {Array} */
       this.clusters = [];
-      /** @type {Array} */
+      /** @type {Array<Array<number>>} */
       this.clusterCentroids = [];
       /** @type {Array} */
       this.noise = [];
@@ -58,7 +58,9 @@ class FIZZSCAN {
       this._assigned = [];
       /** @type {number} */
       this._datasetLength = 0;
-  
+
+      console.log(this);
+      
       this.run(dataset, epsilon, minPts, forceIn, distanceFunction);
     }
     /******************************************************************************/
@@ -74,7 +76,7 @@ class FIZZSCAN {
      * @returns {undefined}
      * @access public
      */
-    run(dataset: Array<any>, epsilon: number, minPts: number, forceIn: boolean, distanceFunction: (p: any, q: any) => number): Array<any> {
+    run(dataset: Array<any>, epsilon: number, minPts: number, forceIn: boolean, distanceFunction?: (p: any, q: any) => number): Array<any> {
       this._init(dataset, epsilon, minPts, forceIn, distanceFunction);
   
       for (var pointId = 0; pointId < this._datasetLength; pointId++) {
@@ -167,7 +169,7 @@ class FIZZSCAN {
      * @returns {undefined}
      * @access protected
      */
-    _init(dataset: Array<any>, epsilon: number, minPts: number, forceIn: boolean, distance: (p: any, q:any) => number): void {
+    _init(dataset: Array<any>, epsilon: number, minPts: number, forceIn: boolean, distance?: (p: any, q:any) => number): void {
   
       if (dataset) {
   
@@ -354,3 +356,4 @@ class FIZZSCAN {
     module.exports = FIZZSCAN;
   }
     */
+   export {FIZZSCAN};
