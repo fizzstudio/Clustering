@@ -1,21 +1,23 @@
+
 //const silhouette = require('@robzzson/silhouette');
 //import { newPlot } from 'plotly.js-dist';
 import csv2json from 'csvjson-csv2json';
-import classifyPoint from "robust-point-in-polygon";
-//import s1Data from "./s1.js";
-import d10c from "./2d-10c.js";
+import classifyPoint from "./robust-point-in-polygon";
 import makeHull from "./convexhull.ts";
 import { FIZZSCAN } from "./FIZZSCAN.ts";
 import Voronoi from "./rhill-voronoi-core.js";
-const data = csv2json(d10c);
 
+//import {star} from "./data/datasaurus.ts";
+//const data = csv2json(star);
+import dataS1 from "./data/s1.ts";
+const data = csv2json(dataS1);
+
+let minPts: number = 4;
 
 let dataArray: Array<Array<number>> = [];
 for (let i = 0; i < data.length; i++) {
     dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
 }
-
-let minPts: number = 4;
 
 //distAvg averges out the nearest neighbor distances over each point in the set
 let distAvg: Array<number> = [];
@@ -40,7 +42,7 @@ distAvg = distAvg.map((x) => x / dataArray.length)
 
 
 var fizzscan = new FIZZSCAN();
-var clusters = fizzscan.run(dataArray, 2 * distAvg[minPts], minPts, true);
+var clusters = fizzscan.run(dataArray, 2 * distAvg[minPts], minPts, false);
 
 console.log(`Clusters:`)
 console.log(clusters);
@@ -65,19 +67,17 @@ console.log("Individual Cluster Analysis")
 console.log("-------------------------")
 
 
-
 let masterArray: Array<clusterObject> = [];
 let densitySorted: Array<clusterObject> = [];
 let i: number = 0;
 const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 
 
-
-//Forms objects out of clusters, assigns properties, then adds them to a master list
+//Forms objects out of clusters, assigns properties, then adds them to a master array
 for (let cluster of clusters) {
     let clusterObject: clusterObject = {
-        centroid: [0],
-        dataPoints: [[0]],
+        centroid: [],
+        dataPoints: [],
         density: 0,
         densityRank: 0,
         hasSignificantHole: false,
@@ -149,9 +149,7 @@ for (let cluster of clusters) {
     clusterObject.density = density;
     clusterObject.relations = [];
     let closest: Array<number> = nNIndices(fizzscan.clusterCentroids, i);
-    //clusterObject.nearestIndices = closest;
     let distances: Array<number> = nNDistances(fizzscan.clusterCentroids, i)
-    //clusterObject.nearestDistances = distances;
 
     let angles: Array<number> = [];
     for (let j = 0; j < clusters.length; j++) {
@@ -165,17 +163,22 @@ for (let cluster of clusters) {
             "cardDirection": card
         })
     }
-    clusterObject.holes = findHoles(clusterObject);
+
+
+    clusterObject.holes = findHoles(clusterObject);    
     let largestHole: hole = clusterObject.holes[0];
     let centroidDistance = euclidDistance(largestHole[0], clusterObject.centroid)
     let deCoHull = deCoordinate(clusterObject.hull)
     let maxDistance = euclidDistance(deCoHull[0], clusterObject.centroid);
+    let avgDistance: number = 0;
     for (let hullPoint of deCoHull) {
-        if (maxDistance < euclidDistance(hullPoint, clusterObject.centroid)) {
-            maxDistance = euclidDistance(hullPoint, clusterObject.centroid);
+        let testDistance: number = euclidDistance(hullPoint, clusterObject.centroid)
+        if (maxDistance < testDistance) {
+            maxDistance = testDistance;
         }
+        avgDistance += testDistance / deCoHull.length
     }
-    let largestHoleImportanceScore = largestHole[1] / maxDistance * (1 - centroidDistance / maxDistance)
+    let largestHoleImportanceScore = largestHole[1] / avgDistance * (1 - centroidDistance / maxDistance)
     console.log(`holeSignificanceScore: ${largestHoleImportanceScore}`)
     let holeParameter = .2;
     if (largestHoleImportanceScore > holeParameter) {
@@ -359,11 +362,11 @@ for (let cluster of clusters) {
 }
 
 //Draws largest holes of each cluster
-/*
+
 for (let cluster of masterArray){
     for (let i = 0; i < 1; i++){
       ctx.beginPath();
-      ctx.ellipse(((cluster.holes[i][0][0] - xMin) / (xMax-xMin)) * graphSize, ((cluster.holes[i][0][1] - yMin) / (yMax-yMin)) * graphSize, ((cluster.holes[i][1]) / (xMax-xMin)) * graphSize, ((cluster.holes[i][1]) / (xMax-xMin)) * graphSize, 0, 0, Math.PI * 2);
+      ctx.ellipse(((cluster.holes[i][0][0] - xMin) / (xMax-xMin)) * graphSize, ((cluster.holes[i][0][1] - yMin) / (yMax-yMin)) * graphSize, ((cluster.holes[i][1]) / (xMax-xMin)) * graphSize, ((cluster.holes[i][1]) / (yMax-yMin)) * graphSize, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.closePath();
       ctx.beginPath();
@@ -372,7 +375,7 @@ for (let cluster of masterArray){
       ctx.closePath();
     }
   }
-*/
+
 
 const precision: number = 50;
 //generateHeatmap(dataArray, precision);
@@ -393,7 +396,7 @@ function euclidDistance(p: Array<number>, q: Array<number>): number {
     }
 
     return Math.sqrt(sum);
-};
+}
 
 function nNDistances(dataset: Array<Array<number>>, pointId: number): Array<number> {
     //Returns list of distances from nearest neighbors for a point, sorted low to high.
@@ -1027,6 +1030,32 @@ function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3:
     return newPoint;
 }
 
+function checkParallel(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): boolean {
+    //Subfunction of completeAngle that is also useful to have as it's own function
+    //Checks if the lines spanning p1-p2 and p3-p4 are parallel
+    if (!Array.isArray(p1)){p1 = [p1.x, p1.y]}
+    if (!Array.isArray(p2)){p2 = [p2.x, p2.y]}
+    if (!Array.isArray(p3)){p3 = [p3.x, p3.y]}
+    if (!Array.isArray(p4)){p4 = [p4.x, p4.y]}
+
+    if ((p2[0] - p1[0]) == 0) {
+        if ((p4[0] - p3[0]) == 0) {
+            //This should never happen if used on a convex polygon
+            return true;
+        }
+        return false;
+    }
+
+    let slope12: number = (p2[1] - p1[1]) / (p2[0] - p1[0]);
+    let slope34: number = (p4[1] - p3[1]) / (p4[0] - p3[0]);
+    if ((slope12 - slope34) == 0) {
+        return true;
+    }
+    else{
+        return false;
+    }
+}
+
 function lin_reg(x: Array<number>, y: Array<number>): Array<number> {
     //Get slope and intercept from x and y arrays.  
     let x_sum: number = 0;
@@ -1096,12 +1125,13 @@ function rSquared(x: Array<number>, y: Array<number>): number {
 function findHoles(cluster: clusterObject): Array<hole> {
     //Returns a list of non-overlapping holes, sorted from largest to smallest.
     let clusterData: Array<coord> = coordinate(cluster.dataPoints);
-
     let voronoi = new Voronoi();
-    let bbox = { xl: cluster.xMin - .1, xr: cluster.xMax + .1, yt: cluster.yMax + .1, yb: cluster.yMin - .1 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
+    let bbox = { xl: cluster.xMin, xr: cluster.xMax, yt: cluster.yMin, yb: cluster.yMax }; 
+
+    
     let diagram = voronoi.compute(clusterData, bbox);
     let shell: Array<coord> = makeHull(clusterData)
-
+    
     let edgePoints: Array<Array<number>> = [];
     let verticesInside: Array<Array<number>> = [];
 
@@ -1110,25 +1140,30 @@ function findHoles(cluster: clusterObject): Array<hole> {
         let vb: Array<number> = [edge.vb.x, edge.vb.y];
         let n: number = shell.length;
         for (let i = 0; i < n; i++) {
-            let intersection: Array<number> = completeAngle(va, vb, shell[i % n], shell[(i + 1) % n])
-            if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0])) && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
-                edgePoints.push(intersection);
+            if (!checkParallel(va, vb, shell[i % n], shell[(i + 1) % n])){
+                let intersection: Array<number> = completeAngle(va, vb, shell[i % n], shell[(i + 1) % n])
+                if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0])) && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
+                    edgePoints.push(intersection);
+                }
             }
+            
         }
     }
 
+    let epsilon: number = 10 ** (Math.log10(Math.max((cluster.xMax - cluster.xMin),(cluster.yMax - cluster.yMin))) - 4)
+
     for (let point of deCoordinate(diagram.vertices)) {
-        if (classifyPoint(deCoordinate(shell), point) < 1) {
+        if (classifyPoint(deCoordinate(shell), point, epsilon) < 1) { 
             verticesInside.push(point);
         }
     }
 
     for (let point of edgePoints) {
-        if (classifyPoint(deCoordinate(shell), point) < 1) {
+        if (classifyPoint(deCoordinate(shell), point, epsilon) < 1) {
             verticesInside.push(point);
         }
     }
-
+        
     let minsArray: Array<Array<number>> = [];
    
     for (let vertexID in verticesInside) {
@@ -1202,3 +1237,4 @@ type relation = {
     isNeighbor?: boolean
 }
 type hole = [Array<number>, number]
+

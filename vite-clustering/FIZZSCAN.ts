@@ -20,7 +20,7 @@ class FIZZSCAN {
     dataset: Array<Array<any>>;
     epsilon: number;
     minPts: number;
-    distance: (p: any, q: any) => number;
+    distance: (p: Array<number>, q: Array<number>) => number;
     forceIn: boolean;
     clusters: Array<Array<number>>;
     clusterCentroids: Array<Array<number>>;
@@ -35,7 +35,7 @@ class FIZZSCAN {
       /** @type {number} */
       this.epsilon = 1;
       /** @type {number} */
-      this.minPts = 2;
+      this.minPts = 4;
       /** @type {function} */
       this.distance = this._euclideanDistance;
       if (distanceFunction == undefined){
@@ -76,7 +76,8 @@ class FIZZSCAN {
      * @returns {undefined}
      * @access public
      */
-    run(dataset: Array<any>, epsilon: number, minPts: number, forceIn: boolean, distanceFunction?: (p: any, q: any) => number): Array<any> {
+    run(dataset: Array<Array<number>>, epsilon: number, minPts: number, forceIn: boolean, distanceFunction?: (p: Array<number>, q: Array<number>) => number): Array<any> {
+
       this._init(dataset, epsilon, minPts, forceIn, distanceFunction);
   
       for (var pointId = 0; pointId < this._datasetLength; pointId++) {
