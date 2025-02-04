@@ -7,6 +7,8 @@ import Voronoi from "./rhill-voronoi-core.js";
 
 //import {dots} from "./data/datasaurus.ts";
 //const data = csv2json(dots);
+//import data2d20c from "./data/2d-20c.ts";
+//const data: Array<any> = csv2json(data2d20c);
 import dataS1 from "./data/s1.ts";
 const data: Array<any> = csv2json(dataS1);
 
@@ -41,7 +43,7 @@ for (let i = 0; i < dataLength; i++) {
 
 dataArray.sort();
 
-const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, false);
+const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, true);
 const clusters = fizzscan.clusters
 
 console.log(`Clusters:`)
@@ -163,23 +165,10 @@ for (let cluster of clusters) {
     }
 
     clusterObject.holes = findHoles(clusterObject);
-    const largestHole: hole = clusterObject.holes[0];
-    const centroidDistance = euclidDistance(largestHole[0], clusterObject.centroid)
-    const deCoHull = deCoordinate(clusterObject.hull)
-    let maxDistance = euclidDistance(deCoHull[0], clusterObject.centroid);
-    let avgDistance: number = 0;
 
-    for (let hullPoint of deCoHull) {
-        let testDistance: number = euclidDistance(hullPoint, clusterObject.centroid)
-        if (maxDistance < testDistance) {
-            maxDistance = testDistance;
-        }
-        avgDistance += testDistance / deCoHull.length
-    }
-
-    const largestHoleImportanceScore = largestHole[1] / avgDistance * (1 - centroidDistance / maxDistance)
     const holeParameter = .2;
-
+    const largestHoleImportanceScore = clusterObject.holes[0][2]
+    console.log(largestHoleImportanceScore);
     if (largestHoleImportanceScore > holeParameter) {
         clusterObject.hasSignificantHole = true;
     }
@@ -345,7 +334,7 @@ for (let cluster of clusters) {
         clusterData.push(dataArray[point]);
     }
     let shell = makeHull(coordinate(clusterData));
-    shell = simplifyHull(shell);
+    //shell = simplifyHull(shell);
     ctx.beginPath();
     ctx.moveTo(((shell[0].x - xMin) / (xMax - xMin)) * graphSize, ((shell[0].y - yMin) / (yMax - yMin)) * graphSize)
     for (let i = 0; i < shell.length; i++) {
@@ -547,22 +536,24 @@ function judgeShape(data: Array<Array<number>>): { description: string, radius?:
                         && (average * .91 < distance4 && distance4 < average * 1.1)) {
                         if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25)
                             && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)) {
-                                return { description: "diamond",
-                                    averageSideLength: average
-                                 };
+                            return {
+                                description: "diamond",
+                                averageSideLength: average
+                            };
                         }
                         else {
-                            return { description: "square",
+                            return {
+                                description: "square",
                                 averageSideLength: average
-                             };
+                            };
                         }
                     }
                     else {
                         return { description: "rectangular" };
                     }
                 }
-                else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20 
-                && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20) {
+                else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20
+                    && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20) {
                     return { description: "parallelogram" };
                 }
                 else {
@@ -667,12 +658,10 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
     }
 
 
-    let yMax: number = Math.max(...y) * 1.1;
-    let xMax: number = Math.max(...x) * 1.1;
-    let yMin: number = Math.min(...y) * .91;
-    let xMin: number = Math.min(...x) * .91;
-
-
+    let yMax: number = Math.max(...y) + 1;
+    let xMax: number = Math.max(...x) + 1;
+    let yMin: number = Math.min(...y) - 1;
+    let xMin: number = Math.min(...x) - 1;
 
     const grid: Array<Array<number>> = [];
 
@@ -1045,7 +1034,7 @@ function mean(x: Array<number>): number {
 }
 
 function findHoles(cluster: clusterObject): Array<hole> {
-    //Returns a list of non-overlapping holes, sorted from largest to smallest.
+    //Returns a list of non-overlapping holes, sorted from most to least significant.
     const clusterData: Array<coord> = coordinate(cluster.dataPoints);
     const voronoi = new Voronoi();
     const bbox = { xl: cluster.xMin, xr: cluster.xMax, yt: cluster.yMin, yb: cluster.yMax };
@@ -1113,12 +1102,27 @@ function findHoles(cluster: clusterObject): Array<hole> {
         }
     }
 
-    const closest: Array<hole> = []
-    for (let i = 0; i < sorted.length; i++) {
-        closest.push([verticesInside[sorted[i][0]], sorted[i][1]])
+    const deCoHull = deCoordinate(cluster.hull)
+    let maxDistance = euclidDistance(deCoHull[0], cluster.centroid);
+    let avgDistance: number = 0;
+
+    for (let hullPoint of deCoHull) {
+        const testDistance: number = euclidDistance(hullPoint, cluster.centroid)
+        if (maxDistance < testDistance) {
+            maxDistance = testDistance;
+        }
+        avgDistance += testDistance / deCoHull.length
     }
 
-    return (closest);
+    const closest: Array<hole> = []
+    for (let i = 0; i < sorted.length; i++) {
+        const testHole: hole = [verticesInside[sorted[i][0]], sorted[i][1], 0]
+        const centroidDistance = euclidDistance(testHole[0], cluster.centroid)
+        const importanceScore = testHole[1] / avgDistance * (1 - centroidDistance / maxDistance)
+        testHole[2] = importanceScore
+        closest.push(testHole)
+    }
+    return (closest.sort((a: hole, b: hole) => {return b[2] - a[2]}));
 }
 
 
@@ -1153,7 +1157,7 @@ type relation = {
     id: number,
     isNeighbor?: boolean
 }
-type hole = [Array<number>, number]
+type hole = [Array<number>, number, number]
 
 //Various functions relating to calculating measure-of-fit for a particularing clustering, currently unused.
 /*
