@@ -7,11 +7,11 @@ import Voronoi from "./rhill-voronoi-core.js";
 
 //import {dots} from "./data/datasaurus.ts";
 //const data = csv2json(dots);
-//import data2d20c from "./data/2d-20c.ts";
-//const data: Array<any> = csv2json(data2d20c);
-import dataS1 from "./data/s1.ts";
-const data: Array<any> = csv2json(dataS1);
-
+import data2d20c from "./data/2d-20c.ts";
+const data = csv2json(data2d20c);
+//import dataS1 from "./data/s1.ts";
+//const data = csv2json(dataS1);
+console.log(data);
 const dataLength: number = data.length
 
 if (dataLength == 0) {
@@ -65,9 +65,20 @@ console.log("-------------------------")
 
 
 const masterArray: Array<clusterObject> = [];
-const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
+const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick",
+    "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
 const clusterRegions: Array<number> = getRegion(fizzscan.clusterCentroids);
 const clusterRegionsJudged: Array<string> = judgeRegion(clusterRegions);
+const xArray: Array<number> = [];
+const yArray: Array<number> = [];
+for (let i = 0; i < dataLength; i++) {
+    xArray.push(dataArray[i][0]);
+    yArray.push(dataArray[i][1]);
+}
+const yMaxGlobal: number = Math.max(...yArray);
+const xMaxGlobal: number = Math.max(...xArray);
+const yMinGlobal: number = Math.min(...yArray);
+const xMinGlobal: number = Math.min(...xArray);
 let i: number = 0;
 //Forms objects out of clusters, assigns properties, then adds them to a master array
 for (let cluster of clusters) {
@@ -142,7 +153,7 @@ for (let cluster of clusters) {
     const hullSimplified: Array<coord> = simplifyHull(hull);
     clusterObject.hullSimplified = hullSimplified;
 
-    const shape: { description: string } = judgeShape(clusterData);
+    const shape: { description: string } = judgeShape(clusterObject);
     clusterObject.shape = shape;
     console.log(`The shape of the data is ${shape.description}`)
 
@@ -168,7 +179,7 @@ for (let cluster of clusters) {
 
     const holeParameter = .2;
     const largestHoleImportanceScore = clusterObject.holes[0][2]
-    console.log(largestHoleImportanceScore);
+    //console.log(largestHoleImportanceScore);
     if (largestHoleImportanceScore > holeParameter) {
         clusterObject.hasSignificantHole = true;
     }
@@ -212,10 +223,13 @@ for (let cluster of fizzscan.clusterCentroids) {
     for (let target of fizzscan.clusterCentroids) {
         let cloneCentroids: Array<Array<number>> = [];
         if (i == j) {
+            //Clusters are 'neighbors' of themselves
             masterArray[i].relations[0].isNeighbor = true;
             j++;
         }
         else {
+            //Calculates the distance taken from the start to any branch that is closer than the target. If the smallest distance
+            //from start-branch-target is less than neighborParameter times the direct distance, start and target are neighbors.
             if (i < j) {
                 cloneCentroids = [...fizzscan.clusterCentroids.slice(0, i), ...fizzscan.clusterCentroids.slice(i + 1)];
                 cloneCentroids.splice(j - 1, 1);
@@ -275,23 +289,12 @@ canvas.height = 1000;
 canvas.width = 1000;
 ctx.transform(1, 0, 0, -1, 0, canvas.height)
 
-const xArray: Array<number> = [];
-const yArray: Array<number> = [];
 
-
-for (let i = 0; i < dataLength; i++) {
-    xArray.push(dataArray[i][0]);
-    yArray.push(dataArray[i][1]);
-}
-let yMax: number = Math.max(...yArray);
-let xMax: number = Math.max(...xArray);
-let yMin: number = Math.min(...yArray);
-let xMin: number = Math.min(...xArray);
 
 //Draws clustered points and outliers
 for (let i = 0; i < xArray.length - 1; i++) {
-    const x: number = ((xArray[i] - xMin) / (xMax - xMin)) * graphSize;
-    const y: number = ((yArray[i] - yMin) / (yMax - yMin)) * graphSize;
+    const x: number = ((xArray[i] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+    const y: number = ((yArray[i] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
 
     ctx.beginPath();
     for (let j = 0; j < clusters.length; j++) {
@@ -313,8 +316,8 @@ for (let i = 0; i < xArray.length - 1; i++) {
 
 
 for (let i = 0; i < fizzscan.clusterCentroids.length; i++) {
-    const x: number = ((fizzscan.clusterCentroids[i][0] - xMin) / (xMax - xMin)) * graphSize;
-    const y: number = ((fizzscan.clusterCentroids[i][1] - yMin) / (yMax - yMin)) * graphSize;
+    const x: number = ((fizzscan.clusterCentroids[i][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+    const y: number = ((fizzscan.clusterCentroids[i][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
     ctx.beginPath();
     ctx.fillStyle = palette[i];
     ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
@@ -336,14 +339,14 @@ for (let cluster of clusters) {
     let shell = makeHull(coordinate(clusterData));
     //shell = simplifyHull(shell);
     ctx.beginPath();
-    ctx.moveTo(((shell[0].x - xMin) / (xMax - xMin)) * graphSize, ((shell[0].y - yMin) / (yMax - yMin)) * graphSize)
+    ctx.moveTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)
     for (let i = 0; i < shell.length; i++) {
-        const x: number = ((shell[i].x - xMin) / (xMax - xMin)) * graphSize;
-        const y: number = ((shell[i].y - yMin) / (yMax - yMin)) * graphSize;
+        const x: number = ((shell[i].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+        const y: number = ((shell[i].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
         ctx.lineTo(x, y);
         ctx.stroke();
     }
-    ctx.lineTo(((shell[0].x - xMin) / (xMax - xMin)) * graphSize, ((shell[0].y - yMin) / (yMax - yMin)) * graphSize)
+    ctx.lineTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)
     ctx.stroke();
     ctx.closePath();
 
@@ -353,11 +356,15 @@ for (let cluster of clusters) {
 for (let cluster of masterArray) {
     for (let i = 0; i < 1; i++) {
         ctx.beginPath();
-        ctx.ellipse(((cluster.holes[i][0][0] - xMin) / (xMax - xMin)) * graphSize, ((cluster.holes[i][0][1] - yMin) / (yMax - yMin)) * graphSize, ((cluster.holes[i][1]) / (xMax - xMin)) * graphSize, ((cluster.holes[i][1]) / (yMax - yMin)) * graphSize, 0, 0, Math.PI * 2);
+        ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
+            ((cluster.holes[i][0][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize,
+            ((cluster.holes[i][1]) / (xMaxGlobal - xMinGlobal)) * graphSize,
+            ((cluster.holes[i][1]) / (yMaxGlobal - yMinGlobal)) * graphSize, 0, 0, Math.PI * 2);
         ctx.stroke();
         ctx.closePath();
         ctx.beginPath();
-        ctx.ellipse(((cluster.holes[i][0][0] - xMin) / (xMax - xMin)) * graphSize, ((cluster.holes[i][0][1] - yMin) / (yMax - yMin)) * graphSize, 4, 4, 0, 0, Math.PI * 2);
+        ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
+            ((cluster.holes[i][0][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize, 4, 4, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.closePath();
     }
@@ -492,8 +499,9 @@ function flatness(data: Array<coord>): number {
     return (2 * Math.sqrt(shoelace(data) * Math.PI) / perimeter(data));
 }
 
-function judgeShape(data: Array<Array<number>>): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
+function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
     //Judges the 'shape' of the convex hull of a cluster of data.
+    const data = cluster.dataPoints
     const h: Array<coord> = makeHull(coordinate(data));
     const flat: number = flatness(h);
     if (flat > .92) {
@@ -564,30 +572,33 @@ function judgeShape(data: Array<Array<number>>): { description: string, radius?:
             case sides > 5:
                 const xData: Array<number> = [];
                 const yData: Array<number> = [];
-                for (let i = 0; i < data.length; i++) {
-                    xData.push(data[i][0]);
-                    yData.push(data[i][1]);
+                for (let i = 0; i < h.length; i++) {
+                    xData.push(h[i].x);
+                    yData.push(h[i].y);
                 }
                 const slope: number = lin_reg(xData, yData)[1];
+                console.log(slope);
                 switch (true) {
-                    case slope > 5 || slope < -5:
-                        return {
-                            description: "elliptical: vertical",
-                            slope: slope
-                        }
-                    case slope > .2:
+                    case slope > .3:
                         return {
                             description: "elliptical: positively correlated",
                             slope: slope
                         }
-                    case slope < .2 && slope > -.2:
+                    case slope < -.3:
+                        return {
+                            description: "elliptical: negatively correlated",
+                            slope: slope
+                        }
+                    case slope < .2 && slope > -.3
+                        && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) > (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
                         return {
                             description: "elliptical: horizontal",
                             slope: slope
                         }
-                    case slope < -.2:
+                    case slope < .2 && slope > -.3
+                        && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) < (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
                         return {
-                            description: "elliptical: negatively correlated",
+                            description: "elliptical: vertical",
                             slope: slope
                         }
                 }
@@ -597,30 +608,33 @@ function judgeShape(data: Array<Array<number>>): { description: string, radius?:
         //Flatness <.7 are classified as linear
         const xData: Array<number> = [];
         const yData: Array<number> = [];
-        for (let i = 0; i < data.length; i++) {
-            xData.push(data[i][0]);
-            yData.push(data[i][1]);
+        for (let i = 0; i < h.length; i++) {
+            xData.push(h[i].x);
+            yData.push(h[i].y);
         }
         const slope: number = lin_reg(xData, yData)[1];
+        console.log(slope);
         switch (true) {
-            case slope > 5 || slope < -5:
-                return {
-                    description: "roughly linear: vertical",
-                    slope: slope
-                }
-            case slope > .2:
+            case slope > .3:
                 return {
                     description: "roughly linear: positively correlated",
                     slope: slope
                 }
-            case slope < .2 && slope > -.2:
+            case slope < -.3:
+                return {
+                    description: "roughly linear: negatively correlated",
+                    slope: slope
+                }
+            case slope < .3 && slope > -.3
+                && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) > (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
                 return {
                     description: "roughly linear: horizontal",
                     slope: slope
                 }
-            case slope < -.2:
+            case slope < .3 && slope > -.3
+                && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) < (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
                 return {
-                    description: "roughly linear: negatively correlated",
+                    description: "roughly linear: vertical",
                     slope: slope
                 }
         }
@@ -845,7 +859,6 @@ function getAngle(x: Array<number>, y: Array<number>): number {
         return 180
     }
     else {
-
         switch (true) {
             case subtraction[0] > 0 && subtraction[1] > 0:
                 angle = Math.atan(subtraction[1] / subtraction[0])
@@ -1009,30 +1022,6 @@ function lin_reg(x: Array<number>, y: Array<number>): Array<number> {
     return [intercept, slope];
 }
 
-function residuals(x: Array<number>, y: Array<number>): Array<number> {
-    //Get residuals from x and y arrays from a simple linear regression.
-    const lin: Array<number> = lin_reg(x, y);
-    const intercept: number = lin[0];
-    const slope: number = lin[1];
-    const residuals: Array<number> = [];
-    const n: number = x.length;
-    for (let i = 0; i < n; i++) {
-        residuals.push(y[i] - (x[i] * slope + intercept))
-    }
-    return residuals;
-}
-
-function mean(x: Array<number>): number {
-    //Get mean of array
-    let i: number = 0;
-    let sum: number = 0;
-    const n: number = x.length;
-    for (i = 0; i < n; i++) {
-        sum += x[i]
-    }
-    return (sum / n);
-}
-
 function findHoles(cluster: clusterObject): Array<hole> {
     //Returns a list of non-overlapping holes, sorted from most to least significant.
     const clusterData: Array<coord> = coordinate(cluster.dataPoints);
@@ -1052,7 +1041,8 @@ function findHoles(cluster: clusterObject): Array<hole> {
         for (let i = 0; i < n; i++) {
             if (!checkParallel(va, vb, shell[i % n], shell[(i + 1) % n])) {
                 let intersection: Array<number> = completeAngle(va, vb, shell[i % n], shell[(i + 1) % n])
-                if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0])) && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
+                if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0]))
+                    && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
                     edgePoints.push(intersection);
                 }
             }
@@ -1122,7 +1112,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
         testHole[2] = importanceScore
         closest.push(testHole)
     }
-    return (closest.sort((a: hole, b: hole) => {return b[2] - a[2]}));
+    return (closest.sort((a: hole, b: hole) => { return b[2] - a[2] }));
 }
 
 
