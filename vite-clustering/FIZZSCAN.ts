@@ -116,13 +116,16 @@ class FIZZSCAN {
       this.clusterCentroids.push(this._centroid(this.clusters[i]));
     }
 
-    let reverseClusterLookup = {};
-
+    let reverseClusterLookup: Array<number> = [];
+    for (let i = 0; i < this._datasetLength; i++){
+      reverseClusterLookup.push(0);
+    }
     for (let clusterID in this.clusters) {
       for (let point of this.clusters[clusterID]) {
-        reverseClusterLookup[point] = clusterID;
+        reverseClusterLookup[point] = Number(clusterID);
       }
     }
+
 
     let tempStorage: number[][] = [];
     for (let noisePointID of this.noise) {
@@ -132,20 +135,20 @@ class FIZZSCAN {
 
     //Optionally forces noise points into clusters by grouping them into the nearest already-clustered point.
     if (this.forceIn) {
-      this.noiseAssigned = JSON.parse(JSON.stringify(this.noise));
+      this.noiseAssigned = [];
       for (let i: number = 0; i < tempStorage.length; i++) {
         let point: number[] = tempStorage[i];
-        this.noiseAssigned[this.noiseAssigned.indexOf(point)] = [point[0], point[1]];
+        this.noiseAssigned.push([point[0], point[1]]);
         this._addToCluster(point[0], point[1]);
         reverseClusterLookup[point[0]] = point[1];
       }
       this.noise = [];
     }
     else {
-      this.noiseAssigned = JSON.parse(JSON.stringify(this.noise));
+      this.noiseAssigned = [];
       for (let i: number = 0; i < tempStorage.length; i++) {
-        let point = tempStorage[i];
-        this.noiseAssigned[this.noiseAssigned.indexOf(point)] = [point[0], point[1]];
+        let point: number[] = tempStorage[i];
+        this.noiseAssigned.push([point[0], point[1]]);
         reverseClusterLookup[point[0]] = point[1];
       }
     }
@@ -329,8 +332,15 @@ class FIZZSCAN {
 
     return [sumX / n, sumY / n];
   }
+    /**
+   * Given a list of clustered points and an outlier, returns the closest clustered point.
+   *
+   * @param {Array} datasetIds
+   * @param {number} pointId
+   * @returns {number}
+   * @access protected
+   */
   _nearestAssignedNeighbor(datasetIds: number[], pointId: number): number {
-    //Given a list of clustered points and an outlier, returns the closest clustered point.
     var nearest: number[] = [0, 0];
     for (var id of datasetIds) {
       if (nearest[1] == 0) {
