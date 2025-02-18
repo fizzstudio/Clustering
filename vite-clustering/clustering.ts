@@ -17,14 +17,13 @@ const data = csv2json(iris);
 console.log(data);
 let sepalWidthSepalLength = getColumns(data, ["sepalLength", "sepalWidth"]);
 let labels = getColumns(data, ["variety"]);
-console.log(sepalWidthSepalLength);
-console.log(labels);
 generateClusterAnalysis(coordinate(sepalWidthSepalLength), labels);
 
 
 
 
 function generateClusterAnalysis(data: coord[], labels?: any[]) {
+    data.sort();
     const dataLength: number = data.length
 
     if (dataLength == 0) {
@@ -32,22 +31,20 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     }
     const factorizedLabels: any[] = [];
     let labelPairs: Array<LabelFactorPair> = []
+    let uniqueLabels: Array<any> = []
     if (labels != undefined){
         if (dataLength != labels.length){
             throw new Error("Error: Given labels do not match length of data")
         }
-        
-        const uniqueLabels = [...new Set(labels)]
-        uniqueLabels[0]
+        uniqueLabels = [...new Set(labels.flat())]
         for (let i = 0; i < uniqueLabels.length; i++){
             labelPairs.push({label: uniqueLabels[i], factor: i})
         }
         for (let i = 0; i < labels.length; i++){
-            factorizedLabels.push(uniqueLabels.indexOf(labels[i]))
-            
+            factorizedLabels.push(uniqueLabels.indexOf(labels[i][0]));
         }
     }
-
+    console.log(factorizedLabels);
     const minPts: number = 4;
 
     const dataArray: Array<Array<number>> = [];
@@ -71,12 +68,35 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         distAvg.push(sum / dataLength);
     }
 
-    dataArray.sort();
-
     const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, true);
-    const clusters = fizzscan.clusters
+    let clusters = fizzscan.clusters
+    let centroids = fizzscan.clusterCentroids;
+    if (labels != undefined){
+        clusters = [];
+        for (let i = 0; i < uniqueLabels.length; i++){
+            clusters.push([])
+        }
+        for (let i = 0; i < dataArray.length; i++){
+            let pointLabel = factorizedLabels[i]
+            clusters[pointLabel].push(i)
+        }
+        centroids = [];
+        for (let i = 0; i < clusters.length; i++){
+            let clusterData: Array<Array<number>> = [];
+            for (let pointId of clusters[i]){
+                clusterData.push(dataArray[pointId])
+            }
+            centroids.push(getCentroid(clusterData));
+        }
+        
+    }
+    console.log(JSON.parse(JSON.stringify(clusters)))
+    console.log(JSON.parse(JSON.stringify(centroids)))
 
-    console.log(JSON.parse(JSON.stringify(fizzscan.noiseAssigned)))
+
+
+
+ 
 
     console.log(`Clusters:`)
     console.log(fizzscan.clusters);
@@ -100,7 +120,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     const masterArray: Array<clusterObject> = [];
     const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick",
         "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
-    const clusterRegions: Array<number> = getRegion(fizzscan.clusterCentroids);
+    const clusterRegions: Array<number> = getRegion(centroids);
     const clusterRegionsJudged: Array<string> = judgeRegion(clusterRegions);
     const xArray: Array<number> = [];
     const yArray: Array<number> = [];
@@ -167,7 +187,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         clusterObject.xMax = xMax;
         clusterObject.yMin = yMin;
         clusterObject.yMax = yMax;
-        clusterObject.centroid = fizzscan.clusterCentroids[i];
+        clusterObject.centroid = centroids[i];
 
 
         clusterObject.id = i;
@@ -194,12 +214,12 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         clusterObject.density = density;
 
         clusterObject.relations = [];
-        const closest: Array<number> = nNIndices(fizzscan.clusterCentroids, i);
-        const distances: Array<number> = nNDistances(fizzscan.clusterCentroids, i)
+        const closest: Array<number> = nNIndices(centroids, i);
+        const distances: Array<number> = nNDistances(centroids, i)
 
         for (let j = 0; j < clusters.length; j++) {
-            const angle: number = getAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
-            const card: string = judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
+            const angle: number = getAngle(centroids[i], centroids[closest[j]]);
+            const card: string = judgeAngle(centroids[i], centroids[closest[j]]);
             clusterObject.relations.push({
                 "id": closest[j],
                 "distance": distances[j],
@@ -250,9 +270,9 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     //Designates "neighbors" of each cluster and adds to masterArray
     i = 0;
     const neighborParameter: number = 1.2
-    for (let cluster of fizzscan.clusterCentroids) {
+    for (let cluster of centroids) {
         let j: number = 0;
-        for (let target of fizzscan.clusterCentroids) {
+        for (let target of centroids) {
             let cloneCentroids: Array<Array<number>> = [];
             if (i == j) {
                 //Clusters are 'neighbors' of themselves
@@ -263,11 +283,11 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
                 //Calculates the distance taken from the start to any branch that is closer than the target. If the smallest distance
                 //from start-branch-target is less than neighborParameter times the direct distance, start and target are neighbors.
                 if (i < j) {
-                    cloneCentroids = [...fizzscan.clusterCentroids.slice(0, i), ...fizzscan.clusterCentroids.slice(i + 1)];
+                    cloneCentroids = [...centroids.slice(0, i), ...centroids.slice(i + 1)];
                     cloneCentroids.splice(j - 1, 1);
                 }
                 if (i > j) {
-                    cloneCentroids = [...fizzscan.clusterCentroids.slice(0, j), ...fizzscan.clusterCentroids.slice(j + 1)];
+                    cloneCentroids = [...centroids.slice(0, j), ...centroids.slice(j + 1)];
                     cloneCentroids.splice(i - 1, 1);
                 }
 
@@ -349,9 +369,9 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     //Draws centroids of each cluster
 
 
-    for (let i = 0; i < fizzscan.clusterCentroids.length; i++) {
-        const x: number = ((fizzscan.clusterCentroids[i][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
-        const y: number = ((fizzscan.clusterCentroids[i][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
+    for (let i = 0; i < centroids.length; i++) {
+        const x: number = ((centroids[i][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+        const y: number = ((centroids[i][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
         ctx.beginPath();
         ctx.fillStyle = palette[i];
         ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
@@ -414,7 +434,6 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         const data = cluster.dataPoints
         const h: Array<coord> = makeHull(coordinate(data));
         const flat: number = flatness(h);
-        console.log(flat);
         if (flat > .92) {
             //High flatness is categorized as roughly circular
             return {
@@ -425,7 +444,6 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         else if (flat > .7) {
             const simple: Array<Array<number>> = deCoordinate(simplifyHull(h));
             const sides: number = simple.length;
-            console.log(sides);
             switch (true) {
                 case sides == 3:
                     return {
@@ -507,9 +525,6 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
                         }
                     }
                     else {
-                        console.log("in here");
-                        console.log(slope);
-                        console.log((Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) > (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal))
                         switch (true) {
                             case slope >= .3:
                                 return {
@@ -1167,21 +1182,15 @@ function coordinate(array: Array<Array<number>>): Array<coord> {
     return dataArray;
 }
 
-
-
-//Various functions relating to calculating measure-of-fit for a particularing clustering, currently unused.
-/*
-const silhouette = require('@robzzson/silhouette');
-const datasetCentroid = getCentroid(dataArray);
 function getCentroid(dataset: Array<Array<number>>): Array<number> {
     //Calculates centroid point of a data set
-    var centroid = [];
+    var centroid: Array<number> = [];
     var i = 0;
     var j = 0;
     var l = dataset.length;
 
     for (i = 0; i < l; i++) {
-        for (j = 0; j < c[i].length; j++) {
+        for (j = 0; j < dataset[i].length; j++) {
             if (centroid[j] !== undefined) {
                 centroid[j] += dataset[i][j] / l;
             }
@@ -1193,6 +1202,11 @@ function getCentroid(dataset: Array<Array<number>>): Array<number> {
     }
     return centroid;
 }
+//Various functions relating to calculating measure-of-fit for a particularing clustering, currently unused.
+/*
+const silhouette = require('@robzzson/silhouette');
+const datasetCentroid = getCentroid(dataArray);
+
 var BCSS = 0;
 var WCSS = 0;
 for (let i = 0; i < clusters.length; i++){
