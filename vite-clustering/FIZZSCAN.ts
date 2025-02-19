@@ -23,7 +23,7 @@ class FIZZSCAN {
   distance: (p: Array<number>, q: Array<number>) => number;
   forceIn: boolean;
   clusters: Array<Array<number>>;
-  clusterCentroids: Array<Array<number>>;
+  clusterCentroids: Array<Pair>;
   noise: Array<number>;
   noiseAssigned: Array<Array<number>>;
   _visited: Array<number>;
@@ -320,7 +320,7 @@ class FIZZSCAN {
    * @returns {Array}
    * @access protected
    */
-  _centroid(c: Array<number>): Array<number> {
+  _centroid(c: Array<number>): Pair {
     let sumX: number = 0;
     let sumY: number = 0;
     const n: number = c.length;
@@ -355,6 +355,7 @@ class FIZZSCAN {
   }
 };
 
+type Pair = [number, number]
 
 /*
 if (typeof module !== 'undefined' && module.exports) {

@@ -4,26 +4,27 @@ import classifyPoint from "./robust-point-in-polygon";
 import makeHull from "./convexhull.ts";
 import { FIZZSCAN } from "./FIZZSCAN.ts";
 import Voronoi from "./rhill-voronoi-core.js";
-
+import polygonClipping from 'polygon-clipping'
 //import {dots} from "./data/datasaurus.ts";
 //const data = csv2json(dots);
 //import data2d20c from "./data/2d-20c.ts";
 //const data = csv2json(data2d20c);
 //import dataS1 from "./data/s1.ts";
 //const data = csv2json(dataS1);
-
+/*
 import iris from "./data/iris.ts";
 const data = csv2json(iris);
 console.log(data);
-let sepalWidthSepalLength = getColumns(data, ["sepalLength", "sepalWidth"]);
+let irisData = getColumns(data, ["sepalLength", "petalLength"]);
 let labels = getColumns(data, ["variety"]);
-generateClusterAnalysis(coordinate(sepalWidthSepalLength), labels);
-
-
-
+generateClusterAnalysis(coordinate(irisData));
+*/
+import dataS1 from "./data/s1.ts";
+const data = csv2json(dataS1);
+generateClusterAnalysis(data);
 
 function generateClusterAnalysis(data: coord[], labels?: any[]) {
-    data.sort();
+    //data.sort();
     const dataLength: number = data.length
 
     if (dataLength == 0) {
@@ -32,22 +33,22 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     const factorizedLabels: any[] = [];
     let labelPairs: Array<LabelFactorPair> = []
     let uniqueLabels: Array<any> = []
-    if (labels != undefined){
-        if (dataLength != labels.length){
+    if (labels != undefined) {
+        if (dataLength != labels.length) {
             throw new Error("Error: Given labels do not match length of data")
         }
         uniqueLabels = [...new Set(labels.flat())]
-        for (let i = 0; i < uniqueLabels.length; i++){
-            labelPairs.push({label: uniqueLabels[i], factor: i})
+        for (let i = 0; i < uniqueLabels.length; i++) {
+            labelPairs.push({ label: uniqueLabels[i], factor: i })
         }
-        for (let i = 0; i < labels.length; i++){
+        for (let i = 0; i < labels.length; i++) {
             factorizedLabels.push(uniqueLabels.indexOf(labels[i][0]));
         }
     }
     console.log(factorizedLabels);
     const minPts: number = 4;
 
-    const dataArray: Array<Array<number>> = [];
+    const dataArray: Array<Pair> = [];
     for (let i = 0; i < dataLength; i++) {
         dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
     }
@@ -71,24 +72,24 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, true);
     let clusters = fizzscan.clusters
     let centroids = fizzscan.clusterCentroids;
-    if (labels != undefined){
+    if (labels != undefined) {
         clusters = [];
-        for (let i = 0; i < uniqueLabels.length; i++){
+        for (let i = 0; i < uniqueLabels.length; i++) {
             clusters.push([])
         }
-        for (let i = 0; i < dataArray.length; i++){
+        for (let i = 0; i < dataArray.length; i++) {
             let pointLabel = factorizedLabels[i]
             clusters[pointLabel].push(i)
         }
         centroids = [];
-        for (let i = 0; i < clusters.length; i++){
-            let clusterData: Array<Array<number>> = [];
-            for (let pointId of clusters[i]){
+        for (let i = 0; i < clusters.length; i++) {
+            let clusterData: Array<Pair> = [];
+            for (let pointId of clusters[i]) {
                 clusterData.push(dataArray[pointId])
             }
             centroids.push(getCentroid(clusterData));
         }
-        
+
     }
     console.log(JSON.parse(JSON.stringify(clusters)))
     console.log(JSON.parse(JSON.stringify(centroids)))
@@ -96,14 +97,14 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
 
 
 
- 
+
 
     console.log(`Clusters:`)
     console.log(fizzscan.clusters);
     console.log(`Noise:`)
     console.log(fizzscan.noise);
     console.log(`NoiseAssigned:`)
-    
+
     console.log(fizzscan.noiseAssigned);
 
     console.log(`Number of clusters: ${clusters.length}`)
@@ -133,9 +134,12 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     const yMinGlobal: number = Math.min(...yArray);
     const xMinGlobal: number = Math.min(...xArray);
     let i: number = 0;
+
+    console.log(clusters);
     //Forms objects out of clusters, assigns properties, then adds them to a master array
     for (let cluster of clusters) {
         const clusterObject: clusterObject = {
+            area: 0,
             centroid: [],
             dataPoints: [],
             density: 0,
@@ -160,7 +164,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
             yMin: 0,
             yMax: 0
         };
-        const clusterData: Array<Array<number>> = [];
+        const clusterData: Array<Pair> = [];
         for (let point of cluster) {
             clusterData.push(dataArray[point]);
         }
@@ -199,6 +203,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         console.log(`This cluster is colored ${palette[i]}`);
 
         const area: number = shoelace(coordinate(clusterData));
+        clusterObject.area = area;
 
         const hull: Array<coord> = makeHull(coordinate(clusterData));
         clusterObject.hull = hull;
@@ -273,7 +278,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     for (let cluster of centroids) {
         let j: number = 0;
         for (let target of centroids) {
-            let cloneCentroids: Array<Array<number>> = [];
+            let cloneCentroids: Array<Pair> = [];
             if (i == j) {
                 //Clusters are 'neighbors' of themselves
                 masterArray[i].relations[0].isNeighbor = true;
@@ -322,6 +327,33 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         i++;
     }
 
+    //Calculates overlap between clusters and adds to masterArray
+    for (let clusterId in masterArray) {
+        let cluster: clusterObject = masterArray[clusterId];
+        for (let targetId in masterArray) {
+            let pointer = 0;
+            for (let relationID in masterArray[clusterId].relations) {
+                let relation = masterArray[clusterId].relations[relationID]
+                if (relation.id == Number(targetId)) {
+                    pointer = Number(relationID)
+                }
+            }
+            if (clusterId == targetId) {
+                masterArray[clusterId].relations[pointer].overlap = 1;
+            }
+            else {
+                let target: clusterObject = masterArray[targetId];
+                let overlap = polygonClipping.intersection([deCoordinate(cluster.hull)], [deCoordinate(target.hull)]) as unknown as Array<Array<Array<Pair>>>;
+                if (overlap.length > 0) {
+                    let overlapPercentage = shoelace(coordinate(overlap[0][0])) / cluster.area;
+                    masterArray[clusterId].relations[pointer].overlap = overlapPercentage;
+                }
+                else {
+                    masterArray[clusterId].relations[pointer].overlap = 0;
+                }
+            }
+        }
+    }
 
 
     console.log(JSON.parse(JSON.stringify(masterArray)));
@@ -329,7 +361,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
 
 
     //Draws the main graph
-    const graphSize: number = 1000;
+    const graphSize: number = 800;
 
     let canvas: HTMLCanvasElement | null = document.getElementById("myCanvas") as HTMLCanvasElement | null;
     if (canvas == null) {
@@ -339,8 +371,8 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         canvas = canvas as HTMLCanvasElement
     }
     const ctx: CanvasRenderingContext2D = canvas.getContext("2d") as CanvasRenderingContext2D;
-    canvas.height = 1000;
-    canvas.width = 1000;
+    canvas.height = graphSize;
+    canvas.width = graphSize;
     ctx.transform(1, 0, 0, -1, 0, canvas.height)
 
 
@@ -354,7 +386,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         for (let j = 0; j < clusters.length; j++) {
             if (clusters[j].includes(i)) {
                 ctx.fillStyle = palette[j];
-                ctx.ellipse(x, y, 2, 2, 0, 0, Math.PI * 2);
+                ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -386,7 +418,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
 
     //Draws convex hulls around each cluster
     for (let cluster of clusters) {
-        const clusterData: Array<Array<number>> = [];
+        const clusterData: Array<Pair> = [];
         for (let point of cluster) {
             clusterData.push(dataArray[point]);
         }
@@ -426,7 +458,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
     }
     */
 
-    const precision: number = 50;
+    const precision: number = 20;
     generateHeatmap(dataArray, precision);
 
     function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
@@ -442,7 +474,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
             };
         }
         else if (flat > .7) {
-            const simple: Array<Array<number>> = deCoordinate(simplifyHull(h));
+            const simple: Array<Pair> = deCoordinate(simplifyHull(h));
             const sides: number = simple.length;
             switch (true) {
                 case sides == 3:
@@ -675,7 +707,7 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
 
 
 function simplifyHull(inputShell: Array<coord>): Array<coord> {
-    const shell: Array<Array<number>> = deCoordinate(inputShell);
+    const shell: Array<Pair> = deCoordinate(inputShell);
     const precision: number = 15;
     let n: number = shell.length;
     //Trims vertices from the shell which change the angle of the incoming line by less than precision degrees
@@ -710,7 +742,7 @@ function simplifyHull(inputShell: Array<coord>): Array<coord> {
 }
 
 
-function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): Array<number> {
+function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): Pair {
     //Calculates and returns the intersection point of the lines spanning p1-p2 and p3-p4.
     //See derivation here: https://www.desmos.com/calculator/vmgoniltui
     if (!Array.isArray(p1)) { p1 = [p1.x, p1.y] }
@@ -739,7 +771,7 @@ function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3:
         throw new Error("Error: attempting to compare parallel lines in completeAngle");
     }
     const x: number = (p1[1] - p3[1] - slope12 * p1[0] + slope34 * p3[0]) / (slope34 - slope12);
-    const newPoint: Array<number> = [x, slope12 * x + p1[1] - slope12 * p1[0]];
+    const newPoint: Pair = [x, slope12 * x + p1[1] - slope12 * p1[0]];
     return newPoint;
 }
 
@@ -965,6 +997,9 @@ function nNIndices(dataset: Array<Array<number>>, pointId: number): Array<number
 
 function shoelace(data: Array<coord>): number {
     //Calculates area from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
+    if (data.length == 0) {
+        return 0;
+    }
     let sum: number = 0;
     const n: number = data.length;
     for (let i = 0; i < n - 1; i++) {
@@ -998,7 +1033,7 @@ function flatness(data: Array<coord>): number {
     return (2 * Math.sqrt(shoelace(data) * Math.PI) / perimeter(data));
 }
 
-function getRegion(data: Array<Array<number>>): Array<number> {
+function getRegion(data: Array<Pair>): Array<number> {
     //Classifies datapoints into one of 9 regions (3x3) and returns an array of numbers describing those regions.
 
     const regions: Array<number> = [];
@@ -1164,17 +1199,23 @@ function judgeAngle(x: Array<number>, y: Array<number>): string {
     throw new Error("Error: undefined angle in judgeAngle()");
 }
 
-function deCoordinate(array: Array<coord>): Array<Array<number>> {
+function deCoordinate(array: Array<coord>): Array<Pair> {
     //Removes x-y coordinates from 2-d arrays
-    const dataArray: Array<Array<number>> = [];
+    if (array.length == 0) {
+        return [];
+    }
+    const dataArray: Array<Pair> = [];
     for (let i = 0; i < array.length; i++) {
         dataArray.push([array[i]["x"], array[i]["y"]])
     }
     return dataArray;
 }
 
-function coordinate(array: Array<Array<number>>): Array<coord> {
+function coordinate(array: Array<Pair>): Array<coord> {
     //Adds x-y coordinates to 2-d arrays
+    if (array.length == 0) {
+        return [];
+    }
     const dataArray: Array<coord> = [];
     for (let i = 0; i < array.length; i++) {
         dataArray.push({ x: array[i][0], y: array[i][1] })
@@ -1182,9 +1223,9 @@ function coordinate(array: Array<Array<number>>): Array<coord> {
     return dataArray;
 }
 
-function getCentroid(dataset: Array<Array<number>>): Array<number> {
+function getCentroid(dataset: Array<Pair>): Pair {
     //Calculates centroid point of a data set
-    var centroid: Array<number> = [];
+    var centroid: Pair = [0, 0];
     var i = 0;
     var j = 0;
     var l = dataset.length;
@@ -1248,8 +1289,9 @@ console.log(`Sillhouette score: ${silhouetteScore}`);
 
 //Types
 type clusterObject = {
+    area: number,
     centroid: Array<number>,
-    dataPoints: Array<Array<number>>,
+    dataPoints: Array<Pair>,
     density: number,
     densityRank: number,
     hasSignificantHole: boolean,
@@ -1276,16 +1318,19 @@ type relation = {
     distance: number,
     id: number,
     isNeighbor?: boolean
+    overlap?: number
 }
 type hole = [Array<number>, number, number]
 
-type LabelFactorPair = {label: any, factor: number}
+type LabelFactorPair = { label: any, factor: number }
 
-function getColumns(data: Array<any>, columnIds: Array<string>): Array<any>{
+type Pair = [number, number]
+
+function getColumns(data: Array<any>, columnIds: Array<string>): Array<any> {
     let columnData: Array<any> = []
-    for (let i = 0; i < data.length; i++){
+    for (let i = 0; i < data.length; i++) {
         let entry: Array<any> = []
-        for (let j = 0; j < columnIds.length; j++){
+        for (let j = 0; j < columnIds.length; j++) {
             entry.push(data[i][columnIds[j]])
         }
         columnData.push(entry)

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "plotly.js-dist": "^3.0.0",
+    "polygon-clipping": "^0.15.7",
     "robust-point-in-polygon": "^1.0.3"
   }
 }
