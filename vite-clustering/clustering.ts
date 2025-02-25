@@ -14,16 +14,15 @@ import polygonClipping from 'polygon-clipping'
 /*
 import iris from "./data/iris.ts";
 const data = csv2json(iris);
-console.log(data);
-let irisData = getColumns(data, ["sepalLength", "petalLength"]);
+let irisData = coordinate(getColumns(data, ["sepalLength", "petalLength"]));
 let labels = getColumns(data, ["variety"]);
-generateClusterAnalysis(coordinate(irisData));
+generateClusterAnalysis(irisData, true, labels);
 */
 import dataS1 from "./data/s1.ts";
-const data = csv2json(dataS1);
-generateClusterAnalysis(data);
+const data: coord[] = csv2json(dataS1) as coord[];
+generateClusterAnalysis(data, true);
 
-function generateClusterAnalysis(data: coord[], labels?: any[]) {
+function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: any[]) {
     //data.sort();
     const dataLength: number = data.length
 
@@ -45,7 +44,6 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
             factorizedLabels.push(uniqueLabels.indexOf(labels[i][0]));
         }
     }
-    console.log(factorizedLabels);
     const minPts: number = 4;
 
     const dataArray: Array<Pair> = [];
@@ -69,9 +67,10 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         distAvg.push(sum / dataLength);
     }
 
-    const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, true);
+    const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, showForcing);
     let clusters = fizzscan.clusters
     let centroids = fizzscan.clusterCentroids;
+    let noise = fizzscan.noise;
     if (labels != undefined) {
         clusters = [];
         for (let i = 0; i < uniqueLabels.length; i++) {
@@ -89,28 +88,23 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
             }
             centroids.push(getCentroid(clusterData));
         }
+        noise = [];
 
     }
-    console.log(JSON.parse(JSON.stringify(clusters)))
-    console.log(JSON.parse(JSON.stringify(centroids)))
-
-
-
-
 
 
     console.log(`Clusters:`)
-    console.log(fizzscan.clusters);
+    console.log(clusters);
     console.log(`Noise:`)
-    console.log(fizzscan.noise);
+    console.log(noise);
     console.log(`NoiseAssigned:`)
 
     console.log(fizzscan.noiseAssigned);
 
     console.log(`Number of clusters: ${clusters.length}`)
-    console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
+    console.log(`Total elements: ${clusters.flat().length + noise.length}`)
     console.log(`Total clustered elements: ${clusters.flat().length}`)
-    console.log(`Total noise elements: ${fizzscan.noise.length}`)
+    console.log(`Total noise elements: ${noise.length}`)
 
 
     console.log("-------------------------")
@@ -149,6 +143,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
             hull: [],
             hullSimplified: [],
             id: 0,
+            perimeter: 0,
             region: 0,
             regionDesc: "",
             relations: [{
@@ -202,11 +197,15 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
         console.log(`This cluster is colored ${palette[i]}`);
 
-        const area: number = shoelace(coordinate(clusterData));
-        clusterObject.area = area;
 
         const hull: Array<coord> = makeHull(coordinate(clusterData));
         clusterObject.hull = hull;
+
+        const area: number = shoelace(hull);
+        clusterObject.area = area;
+
+        const peri: number = perimeter(hull)
+        clusterObject.perimeter = peri;
 
         const hullSimplified: Array<coord> = simplifyHull(hull);
         clusterObject.hullSimplified = hullSimplified;
@@ -237,7 +236,6 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
 
         const holeParameter = .2;
         const largestHoleImportanceScore = clusterObject.holes[0][2]
-        //console.log(largestHoleImportanceScore);
         if (largestHoleImportanceScore > holeParameter) {
             clusterObject.hasSignificantHole = true;
         }
@@ -347,6 +345,14 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
                 if (overlap.length > 0) {
                     let overlapPercentage = shoelace(coordinate(overlap[0][0])) / cluster.area;
                     masterArray[clusterId].relations[pointer].overlap = overlapPercentage;
+                    masterArray[clusterId].relations[pointer].sharedPts = []
+                    for (let point of cluster.dataPoints){
+                        let epsilon = 10 ** (Math.log10(Math.max((cluster.xMax - cluster.xMin), (cluster.yMax - cluster.yMin))) - 4)
+                        if(classifyPoint(deCoordinate(target.hull), point, epsilon) < 1){
+                            masterArray[clusterId].relations[pointer].sharedPts!.push(point);
+                        }
+                    }
+                    masterArray[clusterId].relations[pointer].percentPtsShared = masterArray[clusterId].relations[pointer].sharedPts!.length / masterArray[clusterId].dataPoints.length
                 }
                 else {
                     masterArray[clusterId].relations[pointer].overlap = 0;
@@ -391,7 +397,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
             }
         }
 
-        if (fizzscan.noise.includes(i)) {
+        if (noise.includes(i)) {
             ctx.fillStyle = "gray";
             ctx.ellipse(x, y, 4, 4, 0, 0, Math.PI * 2);
             ctx.fill();
@@ -466,6 +472,7 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
         const data = cluster.dataPoints
         const h: Array<coord> = makeHull(coordinate(data));
         const flat: number = flatness(h);
+        console.log(flat);
         if (flat > .92) {
             //High flatness is categorized as roughly circular
             return {
@@ -568,13 +575,13 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
                                     description: "elliptical: negatively correlated",
                                     slope: slope
                                 }
-                            case slope < .2 && slope > -.3
+                            case slope < .3 && slope > -.3
                                 && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) > (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
                                 return {
                                     description: "elliptical: horizontal",
                                     slope: slope
                                 }
-                            case slope < .2 && slope > -.3
+                            case slope < .3 && slope > -.3
                                 && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) <= (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
                                 return {
                                     description: "elliptical: vertical",
@@ -593,7 +600,6 @@ function generateClusterAnalysis(data: coord[], labels?: any[]) {
                 yData.push(h[i].y);
             }
             const slope: number = lin_reg(xData, yData)[1];
-            console.log(slope);
             switch (true) {
                 case slope > .3:
                     return {
@@ -723,9 +729,10 @@ function simplifyHull(inputShell: Array<coord>): Array<coord> {
     }
 
     //'Fills in' small edges near corners
+    const smallnessParameter = 20
     const peri: number = perimeter(inputShell);
     for (let i = 0; i < n; i++) {
-        if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / 16)) {
+        if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / smallnessParameter)) {
             const angle1: number = getAngle(shell[i % n], shell[(i + 1) % n]);
             const angle2: number = getAngle(shell[(i + 2) % n], shell[(i + 3) % n]);
             const difference: number = angle2 - angle1;
@@ -1299,6 +1306,7 @@ type clusterObject = {
     hull: Array<coord>,
     hullSimplified: Array<coord>,
     id: number,
+    perimeter: number,
     region: number,
     regionDesc: string,
     relations: Array<relation>,
@@ -1319,6 +1327,8 @@ type relation = {
     id: number,
     isNeighbor?: boolean
     overlap?: number
+    sharedPts?: Array<Pair>
+    percentPtsShared?: number
 }
 type hole = [Array<number>, number, number]
 
