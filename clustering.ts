@@ -141,6 +141,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             area: 0,
             centroid: [],
             dataPoints: [],
+            dataPointIDs: [],
             density: 0,
             densityRank: 0,
             hasSignificantHole: false,
@@ -169,6 +170,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             clusterData.push(dataArray[point]);
         }
         clusterObject.dataPoints = clusterData;
+        clusterObject.dataPointIDs = cluster;
         let xMin: number = clusterData[0][0];
         let xMax: number = clusterData[0][0];
         let yMin: number = clusterData[0][1];
@@ -1305,6 +1307,7 @@ type clusterObject = {
     area: number,
     centroid: Array<number>,
     dataPoints: Array<Pair>,
+    dataPointIDs: Array<number>,
     density: number,
     densityRank: number,
     hasSignificantHole: boolean,
