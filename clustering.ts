@@ -1,4 +1,4 @@
-import { newPlot } from 'plotly.js-dist';
+//import { newPlot } from 'plotly.js-dist';
 import csv2json from 'csvjson-csv2json';
 import classifyPoint from "./robust-point-in-polygon";
 import makeHull from "./convexhull.ts";
@@ -370,7 +370,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     console.log(JSON.parse(JSON.stringify(masterArray)));
     console.log("stop");
 
-
+    /*
     //Draws the main graph
     const graphSize: number = 800;
 
@@ -450,7 +450,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
 
     //Draws largest holes of each cluster
-    /*
+    
     for (let cluster of masterArray) {
         for (let i = 0; i < 1; i++) {
             ctx.beginPath();
@@ -467,11 +467,11 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             ctx.closePath();
         }
     }
-    */
+   
 
     const precision: number = 20;
     generateHeatmap(dataArray, precision);
-
+ */
     function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
         //Judges the 'shape' of the convex hull of a cluster of data.
         const data = cluster.dataPoints
@@ -637,7 +637,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
 
 //Helper functions
-
+/*
 function generateHeatmap(dataArray: Array<Array<number>>, precision: number): void {
 
     const y: Array<number> = [];
@@ -716,7 +716,7 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
 
     newPlot(TESTER2, trace1)
 }
-
+*/
 
 function simplifyHull(inputShell: Array<coord>): Array<coord> {
     const shell: Array<Pair> = deCoordinate(inputShell);
