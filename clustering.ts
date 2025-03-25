@@ -97,7 +97,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
     }
 
-
+/*
     console.log(`Clusters:`)
     console.log(clusters);
     console.log(`Noise:`)
@@ -115,11 +115,11 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     console.log("-------------------------")
     console.log("Individual Cluster Analysis")
     console.log("-------------------------")
-
+*/
 
     const masterArray: Array<clusterObject> = [];
-    const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick",
-        "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
+    //const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick",
+   //     "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
     const clusterRegions: Array<number> = getRegion(centroids);
     const clusterRegionsJudged: Array<string> = judgeRegion(clusterRegions);
     const xArray: Array<number> = [];
@@ -134,7 +134,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     const xMinGlobal: number = Math.min(...xArray);
     let i: number = 0;
 
-    console.log(clusters);
+    //console.log(clusters);
     //Forms objects out of clusters, assigns properties, then adds them to a master array
     for (let cluster of clusters) {
         const clusterObject: clusterObject = {
@@ -197,12 +197,12 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
 
         clusterObject.id = i;
-        console.log(`This is cluster Number ${i}`)
+        //console.log(`This is cluster Number ${i}`)
 
         clusterObject.region = clusterRegions[i];
         clusterObject.regionDesc = clusterRegionsJudged[i];
-        console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
-        console.log(`This cluster is colored ${palette[i]}`);
+        //console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
+        //console.log(`This cluster is colored ${palette[i]}`);
 
 
         const hull: Array<coord> = makeHull(coordinate(clusterData));
@@ -219,7 +219,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
         const shape: { description: string } = judgeShape(clusterObject);
         clusterObject.shape = shape;
-        console.log(`The shape of the data is ${shape.description}`)
+        //console.log(`The shape of the data is ${shape.description}`)
 
         const density: number = cluster.length / area;
         clusterObject.density = density;
@@ -252,13 +252,13 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
 
         masterArray.push(clusterObject);
-        console.log(clusterObject);
+        //console.log(clusterObject);
         /*
         console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
           Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
           and Cluster ${closest[3] + 1} (${Math.round(distances[3])} units away to the ${getAngle(3)})`)
         */
-        console.log("-------------------------");
+        //console.log("-------------------------");
         i++;
     }
     //Adds density rankings for each cluster to masterArray
@@ -369,8 +369,8 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
 
 
-    console.log(JSON.parse(JSON.stringify(masterArray)));
-    console.log("stop");
+    //console.log(JSON.parse(JSON.stringify(masterArray)));
+    //console.log("stop");
 
     /*
     //Draws the main graph
@@ -479,7 +479,6 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         const data = cluster.dataPoints
         const h: Array<coord> = makeHull(coordinate(data));
         const flat: number = flatness(h);
-        console.log(flat);
         if (flat > .92) {
             //High flatness is categorized as roughly circular
             return {
