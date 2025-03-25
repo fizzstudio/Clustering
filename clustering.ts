@@ -1,684 +1,647 @@
-//const silhouette = require('@robzzson/silhouette');
-var csv2json = require('csvjson-csv2json');
-var Plotly = require('plotly.js-dist');
-var classifyPoint = require("robust-point-in-polygon");
-const data = csv2json(s1Data);
+import { newPlot } from 'plotly.js-dist';
+import csv2json from 'csvjson-csv2json';
+import classifyPoint from "./robust-point-in-polygon";
+import makeHull from "./convexhull.ts";
+import { FIZZSCAN } from "./FIZZSCAN.ts";
+import Voronoi from "./rhill-voronoi-core.js";
+import polygonClipping from 'polygon-clipping'
 
+export default generateClusterAnalysis;
+export type { clusterObject }
+export type { coord }
 
-let dataArray: Array<Array<number>> = [];
-for (let i = 0; i < data.length; i++) {
-    dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
-}
+//import {dots} from "./data/datasaurus.ts";
+//const data = csv2json(dots);
+//import data2d20c from "./data/2d-20c.ts";
+//const data = csv2json(data2d20c);
+//import dataS1 from "./data/s1.ts";
+//const data = csv2json(dataS1);
+/*
+import iris from "./data/iris.ts";
+const data = csv2json(iris);
+let irisData = coordinate(getColumns(data, ["sepalLength", "petalLength"]));
+let labels = getColumns(data, ["variety"]);
+generateClusterAnalysis(irisData, true, labels);
+*/
+import dataS1 from "./data/s1.ts";
+const data: coord[] = csv2json(dataS1) as coord[];
+generateClusterAnalysis(data, true);
 
-let minPts: number = 4;
+function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: any[]) {
+    //data.sort();
+    const dataLength: number = data.length
 
-//distAvg averges out the nearest neighbor distances over each point in the set
-let distAvg: Array<number> = [];
-let distanceStorage: Array<Array<number>> = [];
-
-for (let i = 0; i < dataArray.length; i++) {
-    distanceStorage.push(nNDistancesSpecial(dataArray, i, minPts))
-}
-
-
-
-for (let i = 0; i < dataArray.length; i++) {
-    let sum: number = 0;
-    for (let j = 0; j < dataArray.length; j++) {
-        sum += distanceStorage[j][i];
+    if (dataLength == 0) {
+        throw new Error("Error: Given data has zero length")
     }
-    distAvg.push(sum)
-}
-distAvg = distAvg.map((x) => x / dataArray.length)
-
-
-
-
-var fizzscan = new FIZZSCAN();
-var clusters = fizzscan.run(dataArray, 2 * distAvg[minPts], minPts, true);
-
-console.log(`Clusters:`)
-console.log(clusters);
-console.log(`Noise:`)
-console.log(fizzscan.noise);
-console.log(`NoiseAssigned:`)
-console.log(fizzscan.noiseAssigned);
-console.log(`Number of clusters: ${clusters.length}`)
-console.log(`Total elements: ${clusters.flat().length + fizzscan.noise.length}`)
-console.log(`Total clustered elements: ${clusters.flat().length}`)
-console.log(`Total noise elements: ${fizzscan.noise.length}`)
-
-//var datasetCentroid = getCentroid(dataArray);
-
-let clusterRegions: Array<number> = getRegion(fizzscan.clusterCentroids);
-let clusterRegionsJudged: Array<string> = judgeRegion(clusterRegions);
-
-
-console.log("-------------------------")
-console.log("Individual Cluster Analysis")
-console.log("-------------------------")
-
-
-
-let masterArray: Array<any> = [];
-let densitySorted: Array<number> = [];
-let i: number = 0;
-const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
-
-
-
-//Forms objects out of clusters, assigns properties, then adds them to a master list
-for (let cluster of clusters) {
-    let clusterObject: {
-        centroid?: Array<number>,
-        dataPoints?: Array<Array<number>>,
-        density?: number,
-        densityRank?: number,
-        hasSignificantHole?: boolean,
-        holes?: Array<any>,
-        hull?: Array<any>,
-        hullSimplified?: Array<any>,
-        id?: number,
-        region?: number,
-        regionDesc?: string,
-        relations?: Array<{
-            angle: number,
-            cardDirection: string,
-            distance: number,
-            id: number,
-            isNeighbor: boolean
-        }>,
-        shape?: {description: string},
-        xMin?: number,
-        xMax?: number,
-        yMin?: number,
-        yMax?: number
-    } = {};
-    let clusterData: Array<Array<number>> = [];
-    for (let point of cluster) {
-        clusterData.push(dataArray[point]);
-    }
-    clusterObject.dataPoints = clusterData;
-    let xMin: number = clusterData[0][0];
-    let xMax: number = clusterData[0][0];
-    let yMin: number = clusterData[0][1];
-    let yMax: number = clusterData[0][1];
-    for (let point of clusterData) {
-        if (point[0] < xMin) {
-            xMin = point[0];
+    const factorizedLabels: any[] = [];
+    let labelPairs: Array<LabelFactorPair> = []
+    let uniqueLabels: Array<any> = []
+    if (labels != undefined) {
+        if (dataLength != labels.length) {
+            throw new Error("Error: Given labels do not match length of data")
         }
-        if (point[0] > xMax) {
-            xMax = point[0];
+        uniqueLabels = [...new Set(labels.flat())]
+        for (let i = 0; i < uniqueLabels.length; i++) {
+            labelPairs.push({ label: uniqueLabels[i], factor: i })
         }
-        if (point[1] < yMin) {
-            yMin = point[1];
-        }
-        if (point[1] > yMax) {
-            yMax = point[1];
+        for (let i = 0; i < labels.length; i++) {
+            factorizedLabels.push(uniqueLabels.indexOf(labels[i][0]));
         }
     }
-    clusterObject.xMin = xMin;
-    clusterObject.xMax = xMax;
-    clusterObject.yMin = yMin;
-    clusterObject.yMax = yMax;
-    clusterObject.centroid = fizzscan.clusterCentroids[i];
+    const minPts: number = 4;
 
-
-
-    console.log(`This is cluster Number ${i}`)
-    clusterObject.id = i;
-    console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
-    clusterObject.region = clusterRegions[i];
-    clusterObject.regionDesc = clusterRegionsJudged[i];
-    console.log(`This cluster is colored ${palette[i]}`);
-    let area = shoelace(coordinate(clusterData));
-    let hull = convexhull.makeHull(coordinate(clusterData));
-    clusterObject.hull = hull;
-    let hullSimplified = simplifyHull(hull);
-    clusterObject.hullSimplified = hullSimplified;
-    let shape = judgeShape(clusterData);
-    console.log(`The shape of the data is ${shape.description}`)
-    clusterObject.shape = shape;
-    let density = cluster.length / area;
-    clusterObject.density = density;
-    clusterObject.relations = [];
-    let closest = nNIndices(fizzscan.clusterCentroids, i);
-    //clusterObject.nearestIndices = closest;
-    let distances = nNDistances(fizzscan.clusterCentroids, i)
-    //clusterObject.nearestDistances = distances;
-
-    let angles: Array<number> = [];
-    for (let j = 0; j < clusters.length; j++) {
-        let angle: number = getAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
-        let card: string = judgeAngle(fizzscan.clusterCentroids[i], fizzscan.clusterCentroids[closest[j]]);
-        angles.push(angle);
-        clusterObject.relations.push({
-            "id": closest[j],
-            "distance": distances[j],
-            "angle": angle,
-            "cardDirection": card
-        })
+    const dataArray: Array<Pair> = [];
+    for (let i = 0; i < dataLength; i++) {
+        dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
     }
 
-    clusterObject.holes = findHoles(clusterObject);
-    let largestHole = clusterObject.holes[0];
-    let centroidDistance = euclidDistance(largestHole[0], clusterObject.centroid)
-    let deCoHull = deCoordinate(clusterObject.hull)
-    let maxDistance = euclidDistance(deCoHull[0], clusterObject.centroid);
-    for (let hullPoint of deCoHull) {
-        if (maxDistance < euclidDistance(hullPoint, clusterObject.centroid)) {
-            maxDistance = euclidDistance(hullPoint, clusterObject.centroid);
+    //distAvg averges out the nearest neighbor distances over each point in the set
+    const distAvg: Array<number> = [];
+    const distanceStorage: Array<Array<number>> = [];
+
+    for (let i = 0; i < dataLength; i++) {
+        distanceStorage.push(nNDistancesSpecial(dataArray, i, minPts))
+    }
+
+    for (let i = 0; i < dataLength; i++) {
+        let sum: number = 0;
+        for (let j = 0; j < dataLength; j++) {
+            sum += distanceStorage[j][i];
         }
-    }
-    let largestHoleImportanceScore = largestHole[1] / maxDistance * (1 - centroidDistance / maxDistance)
-    console.log(`holeSignificanceScore: ${largestHoleImportanceScore}`)
-    let holeParameter = .2;
-    if (largestHoleImportanceScore > holeParameter) {
-        clusterObject.hasSignificantHole = true;
-    }
-    else {
-        clusterObject.hasSignificantHole = false;
+        distAvg.push(sum / dataLength);
     }
 
-    masterArray.push(clusterObject);
-    console.log(clusterObject);
-    /*
-    console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
-      Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
-      and Cluster ${closest[3] + 1} (${Math.round(distances[3])} units away to the ${getAngle(3)})
-    `)
-    */
-    console.log("-------------------------");
-    i++;
-}
+    const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, showForcing);
+    let clusters = fizzscan.clusters
+    let centroids = fizzscan.clusterCentroids;
+    let noise = fizzscan.noise;
+    if (labels != undefined) {
+        clusters = [];
+        for (let i = 0; i < uniqueLabels.length; i++) {
+            clusters.push([])
+        }
+        for (let i = 0; i < dataArray.length; i++) {
+            let pointLabel = factorizedLabels[i]
+            clusters[pointLabel].push(i)
+        }
+        centroids = [];
+        for (let i = 0; i < clusters.length; i++) {
+            let clusterData: Array<Pair> = [];
+            for (let pointId of clusters[i]) {
+                clusterData.push(dataArray[pointId])
+            }
+            centroids.push(getCentroid(clusterData));
+        }
+        noise = [];
 
-densitySorted = masterArray.toSorted((a, b) => {
-    return a.density - b.density;
-})
-for (let cluster of masterArray) {
-    cluster.densityRank = densitySorted.indexOf(cluster);
-}
+    }
 
-i = 0;
-j = 0;
 
-//Designates "neighbors" of each cluster
-neighborParameter = 1.2
-for (let cluster of fizzscan.clusterCentroids) {
-    j = 0;
-    for (let target of fizzscan.clusterCentroids) {
-        let cloneCentroids = [];
-        if (i == j) {
-            masterArray[i].relations[0].isNeighbor = true;
-            j++;
+    console.log(`Clusters:`)
+    console.log(clusters);
+    console.log(`Noise:`)
+    console.log(noise);
+    console.log(`NoiseAssigned:`)
+
+    console.log(fizzscan.noiseAssigned);
+
+    console.log(`Number of clusters: ${clusters.length}`)
+    console.log(`Total elements: ${clusters.flat().length + noise.length}`)
+    console.log(`Total clustered elements: ${clusters.flat().length}`)
+    console.log(`Total noise elements: ${noise.length}`)
+
+
+    console.log("-------------------------")
+    console.log("Individual Cluster Analysis")
+    console.log("-------------------------")
+
+
+    const masterArray: Array<clusterObject> = [];
+    const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick",
+        "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
+    const clusterRegions: Array<number> = getRegion(centroids);
+    const clusterRegionsJudged: Array<string> = judgeRegion(clusterRegions);
+    const xArray: Array<number> = [];
+    const yArray: Array<number> = [];
+    for (let i = 0; i < dataLength; i++) {
+        xArray.push(dataArray[i][0]);
+        yArray.push(dataArray[i][1]);
+    }
+    const yMaxGlobal: number = Math.max(...yArray);
+    const xMaxGlobal: number = Math.max(...xArray);
+    const yMinGlobal: number = Math.min(...yArray);
+    const xMinGlobal: number = Math.min(...xArray);
+    let i: number = 0;
+
+    console.log(clusters);
+    //Forms objects out of clusters, assigns properties, then adds them to a master array
+    for (let cluster of clusters) {
+        const clusterObject: clusterObject = {
+            area: 0,
+            centroid: [],
+            dataPoints: [],
+            density: 0,
+            densityRank: 0,
+            hasSignificantHole: false,
+            holes: [],
+            hull: [],
+            hullSimplified: [],
+            id: 0,
+            perimeter: 0,
+            region: 0,
+            regionDesc: "",
+            relations: [{
+                angle: 0,
+                cardDirection: "",
+                distance: 0,
+                id: 0,
+                isNeighbor: false
+            }],
+            shape: { description: "" },
+            xMin: 0,
+            xMax: 0,
+            yMin: 0,
+            yMax: 0
+        };
+        const clusterData: Array<Pair> = [];
+        for (let point of cluster) {
+            clusterData.push(dataArray[point]);
+        }
+        clusterObject.dataPoints = clusterData;
+        let xMin: number = clusterData[0][0];
+        let xMax: number = clusterData[0][0];
+        let yMin: number = clusterData[0][1];
+        let yMax: number = clusterData[0][1];
+        for (let point of clusterData) {
+            if (point[0] < xMin) {
+                xMin = point[0];
+            }
+            if (point[0] > xMax) {
+                xMax = point[0];
+            }
+            if (point[1] < yMin) {
+                yMin = point[1];
+            }
+            if (point[1] > yMax) {
+                yMax = point[1];
+            }
+        }
+        clusterObject.xMin = xMin;
+        clusterObject.xMax = xMax;
+        clusterObject.yMin = yMin;
+        clusterObject.yMax = yMax;
+        clusterObject.centroid = centroids[i];
+
+
+        clusterObject.id = i;
+        console.log(`This is cluster Number ${i}`)
+
+        clusterObject.region = clusterRegions[i];
+        clusterObject.regionDesc = clusterRegionsJudged[i];
+        console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
+        console.log(`This cluster is colored ${palette[i]}`);
+
+
+        const hull: Array<coord> = makeHull(coordinate(clusterData));
+        clusterObject.hull = hull;
+
+        const area: number = shoelace(hull);
+        clusterObject.area = area;
+
+        const peri: number = perimeter(hull)
+        clusterObject.perimeter = peri;
+
+        const hullSimplified: Array<coord> = simplifyHull(hull);
+        clusterObject.hullSimplified = hullSimplified;
+
+        const shape: { description: string } = judgeShape(clusterObject);
+        clusterObject.shape = shape;
+        console.log(`The shape of the data is ${shape.description}`)
+
+        const density: number = cluster.length / area;
+        clusterObject.density = density;
+
+        clusterObject.relations = [];
+        const closest: Array<number> = nNIndices(centroids, i);
+        const distances: Array<number> = nNDistances(centroids, i)
+
+        for (let j = 0; j < clusters.length; j++) {
+            const angle: number = getAngle(centroids[i], centroids[closest[j]]);
+            const card: string = judgeAngle(centroids[i], centroids[closest[j]]);
+            clusterObject.relations.push({
+                "id": closest[j],
+                "distance": distances[j],
+                "angle": angle,
+                "cardDirection": card
+            })
+        }
+
+        clusterObject.holes = findHoles(clusterObject);
+
+        const holeParameter = .2;
+        const largestHoleImportanceScore = clusterObject.holes[0][2]
+        if (largestHoleImportanceScore > holeParameter) {
+            clusterObject.hasSignificantHole = true;
         }
         else {
-            if (i < j) {
-                cloneCentroids = [...fizzscan.clusterCentroids.slice(0, i), ...fizzscan.clusterCentroids.slice(i + 1)];
-                cloneCentroids.splice(j - 1, 1);
-            }
-            if (i > j) {
-                cloneCentroids = [...fizzscan.clusterCentroids.slice(0, j), ...fizzscan.clusterCentroids.slice(j + 1)];
-                cloneCentroids.splice(i - 1, 1);
-            }
+            clusterObject.hasSignificantHole = false;
+        }
 
-            let directDistance = euclidDistance(cluster, target);
-            let branchDistances = [];
-            for (let branch of cloneCentroids) {
-                if (euclidDistance(cluster, branch) < euclidDistance(cluster, target)) {
-                    branchDistances.push(euclidDistance(cluster, branch) + euclidDistance(branch, target));
-                }
-            }
-            let targetRelation = {};
-            for (relation of masterArray[i].relations) {
-                if (relation.id == j) {
-                    targetRelation = relation;
-                }
-            }
-            if (Math.min(...branchDistances) < neighborParameter * directDistance) {
-                masterArray[i].relations[masterArray[i].relations.indexOf(targetRelation)].isNeighbor = false;
+
+        masterArray.push(clusterObject);
+        console.log(clusterObject);
+        /*
+        console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
+          Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
+          and Cluster ${closest[3] + 1} (${Math.round(distances[3])} units away to the ${getAngle(3)})`)
+        */
+        console.log("-------------------------");
+        i++;
+    }
+    //Adds density rankings for each cluster to masterArray
+    const masterArrayClone: Array<clusterObject> = JSON.parse(JSON.stringify(masterArray));
+    const densitySorted: Array<clusterObject> = masterArrayClone.sort((a, b) => {
+        return a.density - b.density;
+    })
+
+    const densityIDs: Array<number> = [];
+    for (let cluster of densitySorted) {
+        densityIDs.push(cluster.id);
+    }
+    for (let cluster of masterArray) {
+        cluster.densityRank = densityIDs.indexOf(cluster.id);
+    }
+
+
+
+    //Designates "neighbors" of each cluster and adds to masterArray
+    i = 0;
+    const neighborParameter: number = 1.2
+    for (let cluster of centroids) {
+        let j: number = 0;
+        for (let target of centroids) {
+            let cloneCentroids: Array<Pair> = [];
+            if (i == j) {
+                //Clusters are 'neighbors' of themselves
+                masterArray[i].relations[0].isNeighbor = true;
+                j++;
             }
             else {
-                masterArray[i].relations[masterArray[i].relations.indexOf(targetRelation)].isNeighbor = true;
+                //Calculates the distance taken from the start to any branch that is closer than the target. If the smallest distance
+                //from start-branch-target is less than neighborParameter times the direct distance, start and target are neighbors.
+                if (i < j) {
+                    cloneCentroids = [...centroids.slice(0, i), ...centroids.slice(i + 1)];
+                    cloneCentroids.splice(j - 1, 1);
+                }
+                if (i > j) {
+                    cloneCentroids = [...centroids.slice(0, j), ...centroids.slice(j + 1)];
+                    cloneCentroids.splice(i - 1, 1);
+                }
+
+                const directDistance: number = euclidDistance(cluster, target);
+                const branchDistances: Array<number> = [];
+                for (let branch of cloneCentroids) {
+                    if (euclidDistance(cluster, branch) < euclidDistance(cluster, target)) {
+                        branchDistances.push(euclidDistance(cluster, branch) + euclidDistance(branch, target));
+                    }
+                }
+                let targetRelation: relation = {
+                    angle: 0,
+                    cardDirection: "",
+                    distance: 0,
+                    id: 0,
+                    isNeighbor: false
+                };
+                for (let relation of masterArray[i].relations) {
+                    if (relation.id == j) {
+                        targetRelation = relation;
+                    }
+                }
+                if (Math.min(...branchDistances) < neighborParameter * directDistance) {
+                    masterArray[i].relations[masterArray[i].relations.indexOf(targetRelation)].isNeighbor = false;
+                }
+                else {
+                    masterArray[i].relations[masterArray[i].relations.indexOf(targetRelation)].isNeighbor = true;
+                }
+                j++;
             }
-            j++;
+        }
+        i++;
+    }
+
+    //Calculates overlap between clusters and adds to masterArray
+    for (let clusterId in masterArray) {
+        let cluster: clusterObject = masterArray[clusterId];
+        for (let targetId in masterArray) {
+            let pointer = 0;
+            for (let relationID in masterArray[clusterId].relations) {
+                let relation = masterArray[clusterId].relations[relationID]
+                if (relation.id == Number(targetId)) {
+                    pointer = Number(relationID)
+                }
+            }
+            if (clusterId == targetId) {
+                masterArray[clusterId].relations[pointer].overlap = 1;
+            }
+            else {
+                let target: clusterObject = masterArray[targetId];
+                let overlap = polygonClipping.intersection([deCoordinate(cluster.hull)], [deCoordinate(target.hull)]) as unknown as Array<Array<Array<Pair>>>;
+                if (overlap.length > 0) {
+                    let overlapPercentage = shoelace(coordinate(overlap[0][0])) / cluster.area;
+                    masterArray[clusterId].relations[pointer].overlap = overlapPercentage;
+                    masterArray[clusterId].relations[pointer].sharedPts = []
+                    for (let point of cluster.dataPoints) {
+                        let epsilon = 10 ** (Math.log10(Math.max((cluster.xMax - cluster.xMin), (cluster.yMax - cluster.yMin))) - 4)
+                        if (classifyPoint(deCoordinate(target.hull), point, epsilon) < 1) {
+                            masterArray[clusterId].relations[pointer].sharedPts!.push(point);
+                        }
+                    }
+                    masterArray[clusterId].relations[pointer].percentPtsShared = masterArray[clusterId].relations[pointer].sharedPts!.length / masterArray[clusterId].dataPoints.length
+                }
+                else {
+                    masterArray[clusterId].relations[pointer].overlap = 0;
+                }
+            }
         }
     }
-    i++;
-}
 
 
-console.log(masterArray);
-console.log("stop");
+    console.log(JSON.parse(JSON.stringify(masterArray)));
+    console.log("stop");
 
 
-//Draws the main graph
+    //Draws the main graph
+    const graphSize: number = 800;
 
-var precision = 50;
-//generateHeatmap(dataArray, precision);
+    let canvas: HTMLCanvasElement | null = document.getElementById("myCanvas") as HTMLCanvasElement | null;
+    if (canvas == null) {
+        throw new Error("Error: heatmap canvas element missing.")
+    }
+    else {
+        canvas = canvas as HTMLCanvasElement
+    }
+    const ctx: CanvasRenderingContext2D = canvas.getContext("2d") as CanvasRenderingContext2D;
+    canvas.height = graphSize;
+    canvas.width = graphSize;
+    ctx.transform(1, 0, 0, -1, 0, canvas.height)
 
 
-const canvas = document.getElementById("myCanvas");
-const ctx = canvas.getContext("2d");
-canvas.height = 1000;
-canvas.width = 1000;
-ctx.transform(1, 0, 0, -1, 0, canvas.height)
 
-const xArray = [];
-const yArray = [];
+    //Draws clustered points and outliers
+    for (let i = 0; i < xArray.length - 1; i++) {
+        const x: number = ((xArray[i] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+        const y: number = ((yArray[i] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
 
-for (let i = 0; i < dataArray.length; i++) {
-    xArray.push(dataArray[i][0]);
-    yArray.push(dataArray[i][1]);
-}
+        ctx.beginPath();
+        for (let j = 0; j < clusters.length; j++) {
+            if (clusters[j].includes(i)) {
+                ctx.fillStyle = palette[j];
+                ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
 
-//Draws clustered points and outliers
-for (let i = 0; i < xArray.length - 1; i++) {
-    let x = xArray[i] / 1000;
-    let y = yArray[i] / 1000;
-    ctx.beginPath();
-    for (let j = 0; j < clusters.length; j++) {
-        if (clusters[j].includes(i)) {
-            ctx.fillStyle = palette[j];
-            ctx.ellipse(x, y, 2, 2, 0, 0, Math.PI * 2);
+        if (noise.includes(i)) {
+            ctx.fillStyle = "gray";
+            ctx.ellipse(x, y, 4, 4, 0, 0, Math.PI * 2);
             ctx.fill();
         }
     }
 
-    if (fizzscan.noise.includes(i)) {
-        ctx.fillStyle = "gray";
-        ctx.ellipse(x, y, 4, 4, 0, 0, Math.PI * 2);
+    //Draws centroids of each cluster
+
+
+    for (let i = 0; i < centroids.length; i++) {
+        const x: number = ((centroids[i][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+        const y: number = ((centroids[i][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
+        ctx.beginPath();
+        ctx.fillStyle = palette[i];
+        ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
         ctx.fill();
-    }
-}
-
-//Draws centroids of each cluster
-for (let i = 0; i < fizzscan.clusterCentroids.length; i++) {
-    let x = fizzscan.clusterCentroids[i][0] / 1000;
-    let y = fizzscan.clusterCentroids[i][1] / 1000;
-    ctx.beginPath();
-    ctx.fillStyle = palette[i];
-    ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.closePath();
-    ctx.beginPath();
-    ctx.fillStyle = "black";
-    ctx.ellipse(x, y, 6, 6, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.closePath();
-}
-
-//Draws convex hulls around each cluster
-for (let cluster of clusters) {
-    let clusterData = [];
-    for (let point of cluster) {
-        clusterData.push(dataArray[point]);
-    }
-    let shell = convexhull.makeHull(coordinate(clusterData));
-    //shell = simplifyHull(shell);
-    ctx.beginPath();
-    ctx.moveTo(shell[0].x / 1000, shell[0].y / 1000)
-    for (let point of shell) {
-        ctx.lineTo(point.x / 1000, point.y / 1000);
+        ctx.closePath();
+        ctx.beginPath();
+        ctx.fillStyle = "black";
+        ctx.ellipse(x, y, 6, 6, 0, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.closePath();
     }
-    ctx.lineTo(shell[0].x / 1000, shell[0].y / 1000)
-    ctx.stroke();
-    ctx.closePath();
+
+    //Draws convex hulls around each cluster
+    for (let cluster of clusters) {
+        const clusterData: Array<Pair> = [];
+        for (let point of cluster) {
+            clusterData.push(dataArray[point]);
+        }
+        let shell = makeHull(coordinate(clusterData));
+        //shell = simplifyHull(shell);
+        ctx.beginPath();
+        ctx.moveTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)
+        for (let i = 0; i < shell.length; i++) {
+            const x: number = ((shell[i].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
+            const y: number = ((shell[i].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
+            ctx.lineTo(x, y);
+            ctx.stroke();
+        }
+        ctx.lineTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)
+        ctx.stroke();
+        ctx.closePath();
+
+    }
+
+    //Draws largest holes of each cluster
+    /*
+    for (let cluster of masterArray) {
+        for (let i = 0; i < 1; i++) {
+            ctx.beginPath();
+            ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
+                ((cluster.holes[i][0][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize,
+                ((cluster.holes[i][1]) / (xMaxGlobal - xMinGlobal)) * graphSize,
+                ((cluster.holes[i][1]) / (yMaxGlobal - yMinGlobal)) * graphSize, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.closePath();
+            ctx.beginPath();
+            ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
+                ((cluster.holes[i][0][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize, 4, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.closePath();
+        }
+    }
+    */
+
+    const precision: number = 20;
+    generateHeatmap(dataArray, precision);
+
+    function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
+        //Judges the 'shape' of the convex hull of a cluster of data.
+        const data = cluster.dataPoints
+        const h: Array<coord> = makeHull(coordinate(data));
+        const flat: number = flatness(h);
+        console.log(flat);
+        if (flat > .92) {
+            //High flatness is categorized as roughly circular
+            return {
+                description: "roughly circular",
+                radius: Math.sqrt(shoelace(h) / Math.PI)
+            };
+        }
+        else if (flat > .7) {
+            const simple: Array<Pair> = deCoordinate(simplifyHull(h));
+            const sides: number = simple.length;
+            switch (true) {
+                case sides == 3:
+                    return {
+                        description: "triangular",
+                        averageSideLength: (euclidDistance(simple[0], simple[1]) + euclidDistance(simple[1], simple[2]) + euclidDistance(simple[2], simple[0])) / 3
+                    };
+                case sides == 4:
+                    const angle1: number = getAngle(simple[0], simple[1]);
+                    const angle2: number = getAngle(simple[1], simple[2]);
+                    const angle3: number = getAngle(simple[2], simple[3]);
+                    const angle4: number = getAngle(simple[3], simple[0]);
+                    const difference1: number = angle2 - angle1;
+                    const difference2: number = angle3 - angle2;
+                    const difference3: number = angle4 - angle3;
+                    const difference4: number = angle1 - angle4;
+                    if ((Math.abs(((difference1 + 720) % 360) - 270) < 15)
+                        && (Math.abs(((difference2 + 720) % 360) - 270) < 15)
+                        && (Math.abs(((difference3 + 720) % 360) - 270) < 15)
+                        && (Math.abs(((difference4 + 720) % 360) - 270) < 15)) {
+                        const distance1: number = euclidDistance(simple[0], simple[1]);
+                        const distance2: number = euclidDistance(simple[1], simple[2]);
+                        const distance3: number = euclidDistance(simple[2], simple[3]);
+                        const distance4: number = euclidDistance(simple[3], simple[0]);
+                        const average = (distance1 + distance2 + distance3 + distance4) / 4;
+                        if ((average * .91 < distance1 && distance1 < average * 1.1)
+                            && (average * .91 < distance2 && distance2 < average * 1.1)
+                            && (average * .91 < distance3 && distance3 < average * 1.1)
+                            && (average * .91 < distance4 && distance4 < average * 1.1)) {
+                            if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25)
+                                && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)) {
+                                return {
+                                    description: "diamond",
+                                    averageSideLength: average
+                                };
+                            }
+                            else {
+                                return {
+                                    description: "square",
+                                    averageSideLength: average
+                                };
+                            }
+                        }
+                        else {
+                            return { description: "rectangular" };
+                        }
+                    }
+                    else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20
+                        && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20) {
+                        return { description: "parallelogram" };
+                    }
+                    else {
+                        return { description: "irregular quadrilateral" };
+                    }
+                case sides == 5:
+                    return { description: "pentagon" };
+                case sides > 5:
+                    const xData: Array<number> = [];
+                    const yData: Array<number> = [];
+                    for (let i = 0; i < h.length; i++) {
+                        xData.push(h[i].x);
+                        yData.push(h[i].y);
+                    }
+                    const slope: number = lin_reg(xData, yData)[1];
+                    const xRatio: number = ((Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal));
+                    const yRatio: number = ((Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal));
+                    if (xRatio / yRatio > 2
+                        || yRatio / xRatio > 2) {
+                        if (xRatio > yRatio) {
+                            return {
+                                description: "elliptical: horizontal",
+                                slope: slope
+                            }
+                        }
+                        else {
+                            return {
+                                description: "elliptical: vertical",
+                                slope: slope
+                            }
+                        }
+                    }
+                    else {
+                        switch (true) {
+                            case slope >= .3:
+                                return {
+                                    description: "elliptical: positively correlated",
+                                    slope: slope
+                                }
+                            case slope <= -.3:
+                                return {
+                                    description: "elliptical: negatively correlated",
+                                    slope: slope
+                                }
+                            case slope < .3 && slope > -.3
+                                && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) > (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
+                                return {
+                                    description: "elliptical: horizontal",
+                                    slope: slope
+                                }
+                            case slope < .3 && slope > -.3
+                                && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) <= (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
+                                return {
+                                    description: "elliptical: vertical",
+                                    slope: slope
+                                }
+                        }
+                    }
+            }
+        }
+        else {
+            //Flatness <.7 are classified as linear
+            const xData: Array<number> = [];
+            const yData: Array<number> = [];
+            for (let i = 0; i < h.length; i++) {
+                xData.push(h[i].x);
+                yData.push(h[i].y);
+            }
+            const slope: number = lin_reg(xData, yData)[1];
+            switch (true) {
+                case slope > .3:
+                    return {
+                        description: "roughly linear: positively correlated",
+                        slope: slope
+                    }
+                case slope < -.3:
+                    return {
+                        description: "roughly linear: negatively correlated",
+                        slope: slope
+                    }
+                case slope < .3 && slope > -.3
+                    && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) > (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
+                    return {
+                        description: "roughly linear: horizontal",
+                        slope: slope
+                    }
+                case slope < .3 && slope > -.3
+                    && (Math.max(...xData) - Math.min(...xData)) / (xMaxGlobal - xMinGlobal) < (Math.max(...yData) - Math.min(...yData)) / (yMaxGlobal - yMinGlobal):
+                    return {
+                        description: "roughly linear: vertical",
+                        slope: slope
+                    }
+            }
+        }
+        throw new Error("Something has gone wrong in judgeShape()");
+    }
+    return masterArray;
 }
-
-//Draws largest holes of each cluster
-/*
-for (let cluster of masterArray){
-  for (let i = 0; i < 1; i++){
-    ctx.beginPath();
-    ctx.ellipse(cluster.holes[i][0][0] / 1000, cluster.holes[i][0][1] / 1000, cluster.holes[i][1] / 1000, cluster.holes[i][1] / 1000, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.closePath();
-    ctx.beginPath();
-    ctx.ellipse(cluster.holes[i][0][0] / 1000, cluster.holes[i][0][1] / 1000, 4, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.closePath();
-  }
-}
-  */
-
-
-
 
 
 //Helper functions
 
-
-function euclidDistance(p: Array<number>, q: Array<number>): number {
-    //Returns euclidean distance between vectors p and q.
-    var sum: number = 0;
-    var i: number = Math.min(p.length, q.length);
-    while (i--) {
-        sum += (p[i] - q[i]) * (p[i] - q[i]);
-    }
-
-    return Math.sqrt(sum);
-};
-
-function nNDistances(dataset: Array<Array<number>>, pointId: number): Array<number> {
-    //Returns list of distances from nearest neighbors for a point, sorted low to high.
-    var distances: Array<number> = [];
-    for (var id = 0; id < dataset.length; id++) {
-        var dist: number = euclidDistance(dataset[pointId], dataset[id]);
-        distances.push(dist);
-    }
-    let typedArray: Float32Array<ArrayBuffer> = Float32Array.from(distances)
-    typedArray.sort((a, b) => { return a - b; });
-    return Array.from(typedArray);
-
-};
-
-function nNDistancesSpecial(dataset: Array<Array<number>>, pointId: number, minPts: number): Array<number> {
-    //Returns list of distances from nearest neighbors for a point, sorted low to high.
-    var distances: Array<number> = [];
-    for (var id = 0; id < dataset.length; id++) {
-        var dist = euclidDistance(dataset[pointId], dataset[id]);
-        distances.push(dist);
-    }
-    let typedArray = Float32Array.from(distances)
-    if (minPts < 100) return partialSort(Array.from(typedArray), 2 * minPts);
-    else return Array.from(typedArray.sort((a, b) => { return a - b; }));
-};
-
-
-function bisect(items: Array<number>, x: number, lo?: number, hi?: number): number {
-    var mid: number;
-    if (typeof (lo) == 'undefined') lo = 0;
-    if (typeof (hi) == 'undefined') hi = items.length;
-    while (lo < hi) {
-        mid = Math.floor((lo + hi) / 2);
-        if (x < items[mid]) hi = mid;
-        else lo = mid + 1;
-    }
-    return lo;
-}
-
-function insort(items: Array<number>, x: number): void {
-    items.splice(bisect(items, x), 0, x);
-}
-
-function partialSort(items: Array<number>, k: number): Array<number> {
-    var smallest: Array<number> = [];
-    for (var i = 0, len = items.length; i < len; ++i) {
-        var item: number = items[i];
-        if (smallest.length < k || item < smallest[smallest.length - 1]) {
-            insort(smallest, item);
-            if (smallest.length > k)
-                smallest.splice(k, 1);
-        }
-    }
-    return smallest;
-}
-
-function nNIndices(dataset: Array<Array<number>>, pointId: number): Array<number> {
-    //Returns list of nearest indices to a point, sorted low to high, including the point itself.
-    var distances: Array<Array<number>> = [];
-    for (var id = 0; id < dataset.length; id++) {
-        var dist: Array<number> = [id, euclidDistance(dataset[pointId], dataset[id])];
-        distances.push(dist);
-    }
-
-    distances = distances.sort((a, b) => {return a[1] - b[1];});
-    let indices: Array<number> = [];
-    for (let i = 0; i < dataset.length; i++) {
-        indices.push(distances[i][0]);
-    }
-    return indices;
-};
-
-
-
-/*
-function getCentroid(dataset: Array<Array<number>>): Array<number> {
-    //Calculates centroid point of a data set
-    var centroid = [];
-    var i = 0;
-    var j = 0;
-    var l = dataset.length;
-
-    for (i = 0; i < l; i++) {
-        for (j = 0; j < c[i].length; j++) {
-            if (centroid[j] !== undefined) {
-                centroid[j] += dataset[i][j] / l;
-            }
-            else {
-                centroid.push(0);
-                centroid[j] += dataset[i][j] / l;
-            }
-        }
-    }
-    return centroid;
-}
-var BCSS = 0;
-var WCSS = 0;
-for (let i = 0; i < clusters.length; i++){
-  var clusteredData = [];
-  for (let j = 0; j < clusters[i].length; j++){
-    clusteredData.push(dataArray[clusters[i][j]])
-  }
-  BCSS += clusteredData.length * euclidDistance(getCentroid(clusteredData), datasetCentroid);
-}
-for (let i = 0; i < clusters.length; i++){
-  var clusteredData = [];
-  for (let j = 0; j < clusters[i].length; j++){
-    clusteredData.push(dataArray[clusters[i][j]])
-  }
-  for (let j = 0; j < clusteredData.length; j++){
-    WCSS += euclidDistance(clusteredData[j], getCentroid(clusteredData));
-  }
-  
-}
-CHI = BCSS*(dataArray.length-clusters.length)/(WCSS*(clusters.length-1))
-console.log(`Calinski–Harabasz index: ${CHI}`)
-
-
-
-var silhouetteLabels = [];
-for (let i = 0; i < dataArray.length; i++){
-  silhouetteLabels.push(0);
-}
-for (let i = 0; i < clusters.length; i++){
-  //console.log(i);
-  for (let j = 0; j < clusters[i].length; j++){
-    //console.log(j);
-    silhouetteLabels[clusters[i][j]] = i;
-  }
-}
-let silhouetteScore = silhouette(dataArray, silhouetteLabels);
-console.log(`Sillhouette score: ${silhouetteScore}`);
-*/
-
-function shoelace(data: Array<coord>): number {
-    //Calculates area from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
-    let sum: number = 0;
-    let n: number = data.length;
-    for (let i = 0; i < n - 1; i++) {
-        sum += data[i].x * data[i + 1].y - data[i].y * data[i + 1].x
-    }
-    sum += data[n - 1].x * data[0].y - data[n - 1].y * data[0].x
-    return Math.abs(sum / 2);
-}
-
-function perimeter(data: Array<coord>): number {
-    //Calculates perimeter from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
-    let sum: number = 0;
-    let n: number = data.length;
-    if (n < 2) {
-        return -1;
-    }
-    if (n == 2) {
-        return euclidDistance([data[0].x, data[0].y], [data[1].x, data[1].y])
-    }
-    for (let i = 0; i < n - 1; i++) {
-        let pointer: Array<number> = [data[i].x, data[i].y];
-        let next: Array<number> = [data[i + 1].x, data[i + 1].y];
-        sum += euclidDistance(pointer, next);
-    }
-    sum += euclidDistance([data[n - 1].x, data[n - 1].y], [data[0].x, data[0].y])
-    return sum;
-}
-
-function flatness(data: Array<coord>): number {
-    //Gets flatness coefficient from perimeter and area
-    return 2 * Math.sqrt(shoelace(data) * Math.PI) / perimeter(data);
-}
-
-function judgeShape(data) {
-    //console.log(data);
-    let h = convexhull.makeHull(coordinate(data));
-    //console.log(h);
-    let flat = flatness(h);
-    //console.log(flat);
-    if (flat > .92) {
-        return {
-            description: "roughly circular",
-            radius: Math.sqrt(shoelace(h) / Math.PI)
-        };
-    }
-    else if (flat > .7) {
-        let simple = deCoordinate(simplifyHull(h));
-        let sides = simple.length;
-        switch (true) {
-            case sides == 3:
-                return {
-                    description: "triangular",
-                    averageSideLength: (euclidDistance(simple[0], simple[1]) + euclidDistance(simple[1], simple[2]) + euclidDistance(simple[2], simple[0])) / 3
-                };
-            case sides == 4:
-                let angle1 = getAngle(simple[0], simple[1]);
-                let angle2 = getAngle(simple[1], simple[2]);
-                let angle3 = getAngle(simple[2], simple[3]);
-                let angle4 = getAngle(simple[3], simple[0]);
-                let difference1 = angle2 - angle1;
-                let difference2 = angle3 - angle2;
-                let difference3 = angle4 - angle3;
-                let difference4 = angle1 - angle4;
-                //console.log(angle1, angle2, angle3, angle4)
-                //console.log(difference1, difference2, difference3, difference4);
-                if ((Math.abs(((difference1 + 720) % 360) - 270) < 15) && (Math.abs(((difference2 + 720) % 360) - 270) < 15) && (Math.abs(((difference3 + 720) % 360) - 270) < 15) && (Math.abs(((difference4 + 720) % 360) - 270) < 15)) {
-                    let distance1 = euclidDistance(simple[0], simple[1]);
-                    let distance2 = euclidDistance(simple[1], simple[2]);
-                    let distance3 = euclidDistance(simple[2], simple[3]);
-                    let distance4 = euclidDistance(simple[3], simple[0]);
-                    let average = (distance1 + distance2 + distance3 + distance4) / 4;
-                    if ((average * .91 < distance1 && distance1 < average * 1.1) && (average * .91 < distance2 && distance2 < average * 1.1) && (average * .91 < distance3 && distance3 < average * 1.1) && (average * .91 < distance4 && distance4 < average * 1.1)) {
-                        //console.log((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4);
-                        if ((((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) > 25) && (((angle1 % 90 + angle2 % 90 + angle3 % 90 + angle4 % 90) / 4) < 65)) {
-                            return { description: "diamond" };
-                        }
-                        else {
-                            return { description: "square" };
-                        }
-                    }
-                    else {
-                        return { description: "rectangular" };
-                    }
-                }
-                else if (Math.abs((difference1 + 720) % 360 - (difference3 + 720) % 360) < 20 && Math.abs((difference2 + 720) % 360 - (difference4 + 720) % 360) < 20) {
-                    return { description: "parallelogram" };
-                }
-                else {
-                    return { description: "irregular quadrilateral" };
-                }
-            case sides == 5:
-                return { description: "pentagon" };
-            case sides > 5:
-                let xData = [];
-                let yData = [];
-                for (let i = 0; i < data.length; i++) {
-                    xData.push(data[i][0]);
-                    yData.push(data[i][1]);
-                }
-                let slope = lin_reg(xData, yData)[1];
-                switch (true) {
-                    case slope > 5 || slope < -5:
-                        return {
-                            description: "elliptical: vertical",
-                            slope: slope
-                        }
-                    case slope > .2:
-                        return {
-                            description: "elliptical: positively correlated",
-                            slope: slope
-                        }
-                    case slope < .2 && slope > -.2:
-                        return {
-                            description: "elliptical: horizontal",
-                            slope: slope
-                        }
-                    case slope < -.2:
-                        return {
-                            description: "elliptical: negatively correlated",
-                            slope: slope
-                        }
-                }
-        }
-    }
-    else {
-        let xData = [];
-        let yData = [];
-        for (let i = 0; i < data.length; i++) {
-            xData.push(data[i][0]);
-            yData.push(data[i][1]);
-        }
-        let slope = lin_reg(xData, yData)[1];
-        switch (true) {
-            case slope > 5 || slope < -5:
-                return {
-                    description: "roughly linear: vertical",
-                    slope: slope
-                }
-            case slope > .2:
-                return {
-                    description: "roughly linear: positively correlated",
-                    slope: slope
-                }
-            case slope < .2 && slope > -.2:
-                return {
-                    description: "roughly linear: horizontal",
-                    slope: slope
-                }
-            case slope < -.2:
-                return {
-                    description: "roughly linear: negatively correlated",
-                    slope: slope
-                }
-        }
-    }
-}
-
-function deCoordinate(array: Array<coord>): Array<Array<number>> {
-    //Removes x-y coordinates from arrays
-    var dataArray: Array<Array<number>> = [];
-    for (let i = 0; i < array.length; i++) {
-        dataArray.push([array[i]["x"], array[i]["y"]])
-    }
-    return dataArray;
-}
-
-function coordinate(array: Array<Array<number>>): Array<coord> {
-    //Adds x-y coordinates to arrays
-    var dataArray: Array<coord> = [];
-    for (let i = 0; i < array.length; i++) {
-        dataArray.push({ x: array[i][0], y: array[i][1] })
-    }
-    return dataArray;
-}
-
-
 function generateHeatmap(dataArray: Array<Array<number>>, precision: number): void {
 
-
-
-
-    let y: Array<number> = [];
-    let x: Array<number> = [];
+    const y: Array<number> = [];
+    const x: Array<number> = [];
 
     for (let point of dataArray) {
         x.push(point[0]);
@@ -686,14 +649,12 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
     }
 
 
-    let yMax: number = Math.max(...y) * 1.1;
-    let xMax: number = Math.max(...x) * 1.1;
-    let yMin: number = Math.min(...y) * .91;
-    let xMin: number = Math.min(...x) * .91;
+    let yMax: number = Math.max(...y) + 1;
+    let xMax: number = Math.max(...x) + 1;
+    let yMin: number = Math.min(...y) - 1;
+    let xMin: number = Math.min(...x) - 1;
 
-
-
-    var grid: Array<Array<number>> = [];
+    const grid: Array<Array<number>> = [];
 
     for (let i = 0; i < precision; i++) {
         grid.push([]);
@@ -703,21 +664,21 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
     }
 
     for (let point of dataArray) {
-        let xIndex: number = Math.floor((point[0] - xMin) * precision / (xMax - xMin));
-        let yIndex: number = Math.floor((point[1] - yMin) * precision / (yMax - yMin));
+        const xIndex: number = Math.floor((point[0] - xMin) * precision / (xMax - xMin));
+        const yIndex: number = Math.floor((point[1] - yMin) * precision / (yMax - yMin));
         grid[yIndex][xIndex]++;
     }
 
 
 
-    var heatmapData = [
+    const heatmapData = [
         {
             z: grid,
             type: 'heatmap'
         }
     ];
 
-    var heatmapData2 = [
+    const heatmapData2 = [
         {
             z: grid,
             colorscale: [
@@ -737,30 +698,359 @@ function generateHeatmap(dataArray: Array<Array<number>>, precision: number): vo
     ];
 
 
-    let HEATMAP1 = document.getElementById('heatmap1');
+    const HEATMAP1 = document.getElementById('heatmap1');
 
-    Plotly.newPlot(HEATMAP1, heatmapData);
+    newPlot(HEATMAP1, heatmapData);
 
-    let HEATMAP2 = document.getElementById('heatmap2');
+    const HEATMAP2 = document.getElementById('heatmap2');
 
-    Plotly.newPlot(HEATMAP2, heatmapData2);
+    newPlot(HEATMAP2, heatmapData2);
 
-    let TESTER2 = document.getElementById('tester2');
-    var trace1 = [{
+    const TESTER2 = document.getElementById('tester2');
+    const trace1 = [{
         x: x,
         y: y,
         mode: 'markers',
         type: 'scatter'
     }];
 
-    Plotly.newPlot(TESTER2, trace1)
+    newPlot(TESTER2, trace1)
 }
 
-function getRegion(data: Array<Array<number>>): Array<number> {
+
+function simplifyHull(inputShell: Array<coord>): Array<coord> {
+    const shell: Array<Pair> = deCoordinate(inputShell);
+    const precision: number = 15;
+    let n: number = shell.length;
+    //Trims vertices from the shell which change the angle of the incoming line by less than precision degrees
+    for (let i = 0; i < n; i++) {
+        const angle1: number = getAngle(shell[i % n], shell[(i + 1) % n]);
+        const angle2: number = getAngle(shell[(i + 1) % n], shell[(i + 2) % n]);
+        const difference: number = angle2 - angle1;
+        if ((Math.abs(difference) < precision) || (Math.abs(difference + 360) < precision) || (Math.abs(difference - 360) < precision)) {
+            shell.splice((i + 1) % n, 1);
+            i--;
+            n--;
+        }
+    }
+
+    //'Fills in' small edges near corners
+    const smallnessParameter = 20
+    const peri: number = perimeter(inputShell);
+    for (let i = 0; i < n; i++) {
+        if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / smallnessParameter)) {
+            const angle1: number = getAngle(shell[i % n], shell[(i + 1) % n]);
+            const angle2: number = getAngle(shell[(i + 2) % n], shell[(i + 3) % n]);
+            const difference: number = angle2 - angle1;
+            if (!(160 < ((difference + 720) % 360) && ((difference + 720) % 360) < 200)) {
+                const newPoint = completeAngle(shell[i % n], shell[(i + 1) % n], shell[(i + 2) % n], shell[(i + 3) % n])
+                shell[(i + 1) % n] = newPoint;
+                shell.splice((i + 2) % n, 1);
+                i--;
+                n--;
+            }
+        }
+    }
+    return coordinate(shell);
+}
+
+
+function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): Pair {
+    //Calculates and returns the intersection point of the lines spanning p1-p2 and p3-p4.
+    //See derivation here: https://www.desmos.com/calculator/vmgoniltui
+    if (!Array.isArray(p1)) { p1 = [p1.x, p1.y] }
+    if (!Array.isArray(p2)) { p2 = [p2.x, p2.y] }
+    if (!Array.isArray(p3)) { p3 = [p3.x, p3.y] }
+    if (!Array.isArray(p4)) { p4 = [p4.x, p4.y] }
+
+
+    //Handles edge case when two points are aligned vertically
+    if ((p2[0] - p1[0]) == 0) {
+        if ((p4[0] - p3[0]) == 0) {
+            //This should never happen if used on a convex polygon
+            throw new Error("Error: attempting to compare parallel lines in completeAngle");
+        }
+        return [p1[0], (p4[1] - p3[1]) / (p4[0] - p3[0]) * p1[0] + p3[1] - (p4[1] - p3[1]) / (p4[0] - p3[0]) * p3[0]];
+    }
+
+    if ((p4[0] - p3[0]) == 0) {
+        return [p3[0], (p2[1] - p1[1]) / (p2[0] - p1[0]) * p3[0] + p1[1] - (p2[1] - p1[1]) / (p2[0] - p1[0]) * p1[0]];
+    }
+
+    const slope12: number = (p2[1] - p1[1]) / (p2[0] - p1[0]);
+    const slope34: number = (p4[1] - p3[1]) / (p4[0] - p3[0]);
+    if ((slope12 - slope34) == 0) {
+        //This should also never happen if used on a convex polygon
+        throw new Error("Error: attempting to compare parallel lines in completeAngle");
+    }
+    const x: number = (p1[1] - p3[1] - slope12 * p1[0] + slope34 * p3[0]) / (slope34 - slope12);
+    const newPoint: Pair = [x, slope12 * x + p1[1] - slope12 * p1[0]];
+    return newPoint;
+}
+
+function checkParallel(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): boolean {
+    //Subfunction of completeAngle that is also useful to have as it's own function
+    //Checks if the lines spanning p1-p2 and p3-p4 are parallel
+    if (!Array.isArray(p1)) { p1 = [p1.x, p1.y] }
+    if (!Array.isArray(p2)) { p2 = [p2.x, p2.y] }
+    if (!Array.isArray(p3)) { p3 = [p3.x, p3.y] }
+    if (!Array.isArray(p4)) { p4 = [p4.x, p4.y] }
+
+    if ((p2[0] - p1[0]) == 0) {
+        if ((p4[0] - p3[0]) == 0) {
+            return true;
+        }
+        return false;
+    }
+    const slope12: number = (p2[1] - p1[1]) / (p2[0] - p1[0]);
+    const slope34: number = (p4[1] - p3[1]) / (p4[0] - p3[0]);
+    if ((slope12 - slope34) == 0) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+function lin_reg(x: Array<number>, y: Array<number>): Array<number> {
+    //Get slope and intercept from x and y arrays.  
+    const n: number = x.length;
+    let x_sum: number = 0;
+    let y_sum: number = 0;
+    let xy_sum: number = 0;
+    let x2_sum: number = 0;
+    for (let i = 0; i < n; i++) {
+        const x_val = x[i];
+        const y_val = y[i];
+        x_sum += x_val;
+        y_sum += y_val;
+        xy_sum += x_val * y_val;
+        x2_sum += x_val * x_val;
+    }
+    const slope: number = (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum);
+    const intercept: number = (y_sum / n) - slope * (x_sum / n);
+    return [intercept, slope];
+}
+
+function findHoles(cluster: clusterObject): Array<hole> {
+    //Returns a list of non-overlapping holes, sorted from most to least significant.
+    const clusterData: Array<coord> = coordinate(cluster.dataPoints);
+    const voronoi = new Voronoi();
+    const bbox = { xl: cluster.xMin, xr: cluster.xMax, yt: cluster.yMin, yb: cluster.yMax };
+
+    const diagram = voronoi.compute(clusterData, bbox);
+    const shell: Array<coord> = makeHull(clusterData)
+
+    const edgePoints: Array<Array<number>> = [];
+    const verticesInside: Array<Array<number>> = [];
+
+    for (let edge of diagram.edges) {
+        const va: Array<number> = [edge.va.x, edge.va.y];
+        const vb: Array<number> = [edge.vb.x, edge.vb.y];
+        const n: number = shell.length;
+        for (let i = 0; i < n; i++) {
+            if (!checkParallel(va, vb, shell[i % n], shell[(i + 1) % n])) {
+                let intersection: Array<number> = completeAngle(va, vb, shell[i % n], shell[(i + 1) % n])
+                if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0]))
+                    && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
+                    edgePoints.push(intersection);
+                }
+            }
+
+        }
+    }
+
+    const epsilon: number = 10 ** (Math.log10(Math.max((cluster.xMax - cluster.xMin), (cluster.yMax - cluster.yMin))) - 4)
+
+    for (let point of deCoordinate(diagram.vertices)) {
+        if (classifyPoint(deCoordinate(shell), point, epsilon) < 1) {
+            verticesInside.push(point);
+        }
+    }
+
+    for (let point of edgePoints) {
+        if (classifyPoint(deCoordinate(shell), point, epsilon) < 1) {
+            verticesInside.push(point);
+        }
+    }
+
+    let minsArray: Array<Array<number>> = [];
+
+    for (let vertexID in verticesInside) {
+        let vertex: Array<number> = verticesInside[vertexID];
+        let min: Array<number> = [Number(vertexID), euclidDistance(vertex, deCoordinate(clusterData)[0])];
+        for (let point of deCoordinate(clusterData)) {
+            if (min[1] > euclidDistance(vertex, point)) {
+                min = [Number(vertexID), euclidDistance(vertex, point)]
+            }
+        }
+        minsArray.push(min);
+    }
+
+    let sorted: Array<Array<number>> = minsArray.sort((a: number[], b: number[]) => { return b[1] - a[1] })
+
+    //Culls similar holes by removing hole centers that lie within the border of a larger hole.
+    for (let pointID in sorted) {
+        const point: Array<number> = sorted[pointID];
+        let i: number = Number(pointID) + 1;
+        while (i < sorted.length) {
+            if (euclidDistance(verticesInside[point[0]], verticesInside[sorted[i][0]]) < point[1]) {
+                sorted.splice(i, 1);
+                i--;
+            }
+            i++;
+        }
+    }
+
+    const deCoHull = deCoordinate(cluster.hull)
+    let maxDistance = euclidDistance(deCoHull[0], cluster.centroid);
+    let avgDistance: number = 0;
+
+    for (let hullPoint of deCoHull) {
+        const testDistance: number = euclidDistance(hullPoint, cluster.centroid)
+        if (maxDistance < testDistance) {
+            maxDistance = testDistance;
+        }
+        avgDistance += testDistance / deCoHull.length
+    }
+
+    const closest: Array<hole> = []
+    for (let i = 0; i < sorted.length; i++) {
+        const testHole: hole = [verticesInside[sorted[i][0]], sorted[i][1], 0]
+        const centroidDistance = euclidDistance(testHole[0], cluster.centroid)
+        const importanceScore = testHole[1] / avgDistance * (1 - centroidDistance / maxDistance)
+        testHole[2] = importanceScore
+        closest.push(testHole)
+    }
+    return (closest.sort((a: hole, b: hole) => { return b[2] - a[2] }));
+}
+
+function euclidDistance(p: Array<number>, q: Array<number>): number {
+    //Returns euclidean distance between vectors p and q.
+    let sum: number = 0;
+    let i: number = Math.min(p.length, q.length);
+    while (i--) {
+        sum += (p[i] - q[i]) * (p[i] - q[i]);
+    }
+
+    return Math.sqrt(sum);
+}
+
+function nNDistances(dataset: Array<Array<number>>, pointId: number): Array<number> {
+    //Returns list of distances from nearest neighbors for a point, sorted low to high.
+    const distances: Array<number> = [];
+    for (let id = 0; id < dataset.length; id++) {
+        const dist: number = euclidDistance(dataset[pointId], dataset[id]);
+        distances.push(dist);
+    }
+    let typedArray: Float32Array<ArrayBuffer> = Float32Array.from(distances)
+    typedArray.sort((a, b) => { return a - b; });
+    return Array.from(typedArray);
+
+};
+
+function nNDistancesSpecial(dataset: Array<Array<number>>, pointId: number, minPts: number): Array<number> {
+    //Returns list of distances from nearest neighbors for a point, sorted low to high.
+    const distances: Array<number> = [];
+    for (let id = 0; id < dataset.length; id++) {
+        const dist = euclidDistance(dataset[pointId], dataset[id]);
+        distances.push(dist);
+    }
+    let typedArray = Float32Array.from(distances)
+    if (minPts < 100) return partialSort(typedArray, 2 * minPts);
+    else return Array.from(typedArray.sort((a, b) => { return a - b; }));
+};
+
+
+function bisect(items: Array<number>, x: number, lo?: number, hi?: number): number {
+    let mid: number;
+    if (typeof (lo) == 'undefined') lo = 0;
+    if (typeof (hi) == 'undefined') hi = items.length;
+    while (lo < hi) {
+        mid = Math.floor((lo + hi) / 2);
+        if (x < items[mid]) hi = mid;
+        else lo = mid + 1;
+    }
+    return lo;
+}
+
+function insort(items: Array<number>, x: number): void {
+    items.splice(bisect(items, x), 0, x);
+}
+
+function partialSort(items: Float32Array, k: number): Array<number> {
+    let smallest: Array<number> = [];
+    for (let i = 0, len = items.length; i < len; ++i) {
+        const item: number = items[i];
+        if (smallest.length < k || item < smallest[smallest.length - 1]) {
+            insort(smallest, item);
+            if (smallest.length > k)
+                smallest.splice(k, 1);
+        }
+    }
+    return smallest;
+}
+
+function nNIndices(dataset: Array<Array<number>>, pointId: number): Array<number> {
+    //Returns list of nearest indices to a point, sorted low to high, including the point itself.
+    let distances: Array<Array<number>> = [];
+    for (let id = 0; id < dataset.length; id++) {
+        const dist: Array<number> = [id, euclidDistance(dataset[pointId], dataset[id])];
+        distances.push(dist);
+    }
+
+    distances = distances.sort((a, b) => { return a[1] - b[1]; });
+    const indices: Array<number> = [];
+    for (let i = 0; i < dataset.length; i++) {
+        indices.push(distances[i][0]);
+    }
+    return indices;
+};
+
+
+function shoelace(data: Array<coord>): number {
+    //Calculates area from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
+    if (data.length == 0) {
+        return 0;
+    }
+    let sum: number = 0;
+    const n: number = data.length;
+    for (let i = 0; i < n - 1; i++) {
+        sum += data[i].x * data[i + 1].y - data[i].y * data[i + 1].x
+    }
+    sum += data[n - 1].x * data[0].y - data[n - 1].y * data[0].x
+    return Math.abs(sum / 2);
+}
+
+function perimeter(data: Array<coord>): number {
+    //Calculates perimeter from set of points, intended to be used on convex hull with points ordered either c-wise or cc-wise
+    let sum: number = 0;
+    const n: number = data.length;
+    if (n < 2) {
+        return 0;
+    }
+    if (n == 2) {
+        return euclidDistance([data[0].x, data[0].y], [data[1].x, data[1].y])
+    }
+    for (let i = 0; i < n - 1; i++) {
+        let pointer: Array<number> = [data[i].x, data[i].y];
+        let next: Array<number> = [data[i + 1].x, data[i + 1].y];
+        sum += euclidDistance(pointer, next);
+    }
+    sum += euclidDistance([data[n - 1].x, data[n - 1].y], [data[0].x, data[0].y])
+    return sum;
+}
+
+function flatness(data: Array<coord>): number {
+    //Gets flatness coefficient from perimeter and area
+    return (2 * Math.sqrt(shoelace(data) * Math.PI) / perimeter(data));
+}
+
+function getRegion(data: Array<Pair>): Array<number> {
     //Classifies datapoints into one of 9 regions (3x3) and returns an array of numbers describing those regions.
 
-    let regions: Array<number> = [];
-    let n: number = data.length;
+    const regions: Array<number> = [];
+    const n: number = data.length;
     let xMax: number = data[0][0];
     let yMax: number = data[0][1];
     let xMin: number = data[0][0];
@@ -779,13 +1069,13 @@ function getRegion(data: Array<Array<number>>): Array<number> {
             yMin = data[i][1];
         }
     }
-    let left: number = ((xMax - xMin) / 3) + xMin;
-    let right: number = ((xMax - xMin) * 2 / 3) + xMin;
-    let down: number = ((yMax - yMin) / 3) + yMin;
-    let up: number = ((yMax - yMin) * 2 / 3) + yMin;
+    const left: number = ((xMax - xMin) / 3) + xMin;
+    const right: number = ((xMax - xMin) * 2 / 3) + xMin;
+    const down: number = ((yMax - yMin) / 3) + yMin;
+    const up: number = ((yMax - yMin) * 2 / 3) + yMin;
 
     for (let point of data) {
-        let test: Array<boolean> = [point[0] < left, point[0] < right, point[1] < down, point[1] < up];
+        const test: Array<boolean> = [point[0] < left, point[0] < right, point[1] < down, point[1] < up];
         switch (true) {
             case JSON.stringify(test) == JSON.stringify([true, true, true, true]):
                 regions.push(0);
@@ -820,10 +1110,10 @@ function getRegion(data: Array<Array<number>>): Array<number> {
 
 function judgeRegion(regionIDS: Array<number>): Array<string> {
     //Judges numerical regions into strings describing their location on a 3x3 grid.
-    let regions: Array<string> = [];
-    let n: number = data.length;
+    const regions: Array<string> = [];
+    const n: number = regionIDS.length;
     for (let i = 0; i < n; i++) {
-        let regionID: number = regionIDS[i];
+        const regionID: number = regionIDS[i];
         switch (true) {
             case regionID == 0:
                 regions.push("bottom left");
@@ -874,7 +1164,6 @@ function getAngle(x: Array<number>, y: Array<number>): number {
         return 180
     }
     else {
-
         switch (true) {
             case subtraction[0] > 0 && subtraction[1] > 0:
                 angle = Math.atan(subtraction[1] / subtraction[0])
@@ -901,246 +1190,166 @@ function getAngle(x: Array<number>, y: Array<number>): number {
 
 function judgeAngle(x: Array<number>, y: Array<number>): string {
     //Categorizes a numerical angle between two points into a cardinal direction
-    let angle: number = getAngle(x, y);
+    const angle: number = getAngle(x, y);
     switch (true) {
-        case 345 < angle || angle < 15:
+        case 345 < angle || angle <= 15:
             return "east";
-        case 15 < angle && angle < 75:
+        case 15 < angle && angle <= 75:
             return "north-east";
-        case 75 < angle && angle < 105:
+        case 75 < angle && angle <= 105:
             return "north";
-        case 105 < angle && angle < 165:
+        case 105 < angle && angle <= 165:
             return "north-west";
-        case 165 < angle && angle < 195:
+        case 165 < angle && angle <= 195:
             return "west";
-        case 195 < angle && angle < 255:
+        case 195 < angle && angle <= 255:
             return "south-west";
-        case 255 < angle && angle < 285:
+        case 255 < angle && angle <= 285:
             return "south";
-        case 285 < angle && angle < 345:
+        case 285 < angle && angle <= 345:
             return "south-east";
     }
     throw new Error("Error: undefined angle in judgeAngle()");
 }
 
-
-
-function simplifyHull(inputShell: Array<coord>): Array<coord> {
-    let shell: Array<Array<number>> = deCoordinate(inputShell);
-    let n: number = shell.length;
-    let precision: number = 15;
-    let angle1: number = 0;
-    let angle2: number = 0;
-    let difference: number = 0;
-    //Trims vertices from the shell which change the angle of the incoming line by less than precision degrees
-    for (let i = 0; i < n; i++) {
-        angle1 = getAngle(shell[i % n], shell[(i + 1) % n]);
-        angle2 = getAngle(shell[(i + 1) % n], shell[(i + 2) % n]);
-        difference = angle2 - angle1;
-        if ((Math.abs(difference) < precision) || (Math.abs(difference + 360) < precision) || (Math.abs(difference - 360) < precision)) {
-            shell.splice((i + 1) % n, 1);
-            i--;
-            n--;
-        }
+function deCoordinate(array: Array<coord>): Array<Pair> {
+    //Removes x-y coordinates from 2-d arrays
+    if (array.length == 0) {
+        return [];
     }
+    const dataArray: Array<Pair> = [];
+    for (let i = 0; i < array.length; i++) {
+        dataArray.push([array[i]["x"], array[i]["y"]])
+    }
+    return dataArray;
+}
 
-    //'Fills in' small edges near corners
-    let peri: number = perimeter(inputShell);
-    for (let i = 0; i < n; i++) {
-        if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / 16)) {
-            angle1 = getAngle(shell[i % n], shell[(i + 1) % n]);
-            angle2 = getAngle(shell[(i + 2) % n], shell[(i + 3) % n]);
-            difference = angle2 - angle1;
-            if (!(160 < ((difference + 720) % 360) && ((difference + 720) % 360) < 200)) {
-                let newPoint = completeAngle(shell[i % n], shell[(i + 1) % n], shell[(i + 2) % n], shell[(i + 3) % n])
-                shell[(i + 1) % n] = newPoint;
-                shell.splice((i + 2) % n, 1);
-                i--;
-                n--;
+function coordinate(array: Array<Pair>): Array<coord> {
+    //Adds x-y coordinates to 2-d arrays
+    if (array.length == 0) {
+        return [];
+    }
+    const dataArray: Array<coord> = [];
+    for (let i = 0; i < array.length; i++) {
+        dataArray.push({ x: array[i][0], y: array[i][1] })
+    }
+    return dataArray;
+}
+
+function getCentroid(dataset: Array<Pair>): Pair {
+    //Calculates centroid point of a data set
+    var centroid: Pair = [0, 0];
+    var i = 0;
+    var j = 0;
+    var l = dataset.length;
+
+    for (i = 0; i < l; i++) {
+        for (j = 0; j < dataset[i].length; j++) {
+            if (centroid[j] !== undefined) {
+                centroid[j] += dataset[i][j] / l;
+            }
+            else {
+                centroid.push(0);
+                centroid[j] += dataset[i][j] / l;
             }
         }
     }
-    return coordinate(shell);
+    return centroid;
 }
+//Various functions relating to calculating measure-of-fit for a particularing clustering, currently unused.
+/*
+const silhouette = require('@robzzson/silhouette');
+const datasetCentroid = getCentroid(dataArray);
 
-
-function completeAngle(p1: coord, p2: coord, p3: coord, p4: coord) {
-    //Calculates and returns the intersection point of the lines bridging p1-p2 and p3-p4.
-    //See derivation here: https://www.desmos.com/calculator/vmgoniltui If whoever's reading this has an easier way to do this let me know
-
-    if (p1.x !== undefined) { p1 = [p1.x, p1.y] }
-    if (p2.x !== undefined) { p2 = [p2.x, p2.y] }
-    if (p3.x !== undefined) { p3 = [p3.x, p3.y] }
-    if (p4.x !== undefined) { p4 = [p4.x, p4.y] }
-
-    //Handles edge case when two points are aligned vertically
-    if ((p2[0] - p1[0]) == 0) {
-        if ((p4[0] - p3[0]) == 0) {
-            //This should never happen if used on a convex polygon
-            return -1;
-        }
-        return (p4[1] - p3[1]) / (p4[0] - p3[0]) * p1[0] + p3[1] - (p4[1] - p3[1]) / (p4[0] - p3[0]) * p3[0];
-    }
-
-    if ((p4[0] - p3[0]) == 0) {
-        return (p2[1] - p1[1]) / (p2[0] - p1[0]) * p3[0] + p1[1] - (p2[1] - p1[1]) / (p2[0] - p1[0]) * p1[0];
-    }
-
-    let slope12 = (p2[1] - p1[1]) / (p2[0] - p1[0]);
-    let slope34 = (p4[1] - p3[1]) / (p4[0] - p3[0]);
-    if ((slope12 - slope34) == 0) {
-        //This should also never happen if used on a convex polygon
-        return -1;
-    }
-    let x = (p1[1] - p3[1] - slope12 * p1[0] + slope34 * p3[0]) / (slope34 - slope12);
-    let newPoint = [x, slope12 * x + p1[1] - slope12 * p1[0]];
-    return newPoint;
+var BCSS = 0;
+var WCSS = 0;
+for (let i = 0; i < clusters.length; i++){
+  var clusteredData = [];
+  for (let j = 0; j < clusters[i].length; j++){
+    clusteredData.push(dataArray[clusters[i][j]])
+  }
+  BCSS += clusteredData.length * euclidDistance(getCentroid(clusteredData), datasetCentroid);
 }
-
-function lin_reg(x: Array<number>, y: Array<number>): Array<number> {
-    //Get slope and intercept from x and y arrays.  
-    let x_sum: number = 0;
-    let y_sum: number = 0;
-    let xy_sum: number = 0;
-    let x2_sum: number = 0;
-    const n: number = x.length;
-    let i: number = 0;
-    for (i = 0; i < n; i++) {
-        let x_val = x[i];
-        let y_val = y[i];
-        x_sum += x_val;
-        y_sum += y_val;
-        xy_sum += x_val * y_val;
-        x2_sum += x_val * x_val;
-    }
-    let slope: number = (n * xy_sum - x_sum * y_sum) / (n * x2_sum - x_sum * x_sum);
-    let intercept: number = (y_sum / n) - slope * (x_sum / n);
-    return [intercept, slope];
+for (let i = 0; i < clusters.length; i++){
+  var clusteredData = [];
+  for (let j = 0; j < clusters[i].length; j++){
+    clusteredData.push(dataArray[clusters[i][j]])
+  }
+  for (let j = 0; j < clusteredData.length; j++){
+    WCSS += euclidDistance(clusteredData[j], getCentroid(clusteredData));
+  }
+  
 }
+CHI = BCSS*(dataArray.length-clusters.length)/(WCSS*(clusters.length-1))
+console.log(`Calinski–Harabasz index: ${CHI}`)
 
-function residuals(x: Array<number>, y: Array<number>): Array<number> {
-    //Get residuals from x and y arrays from a simple linear regression.
-    let lin: Array<number> = lin_reg(x, y);
-    let slope: number = lin[1];
-    let intercept: number = lin[0];
-    let residuals: Array<number> = [];
-    let i: number = 0;
-    const n: number = x.length;
-    for (i = 0; i < n; i++) {
-        residuals.push(y[i] - (x[i] * slope + intercept))
-    }
-    return residuals;
+
+
+var silhouetteLabels = [];
+for (let i = 0; i < dataArray.length; i++){
+  silhouetteLabels.push(0);
 }
-
-function mean(x: Array<number>): number {
-    //Get mean of array
-    let i: number = 0;
-    let sum: number = 0;
-    const n: number = x.length;
-    for (i = 0; i < n; i++) {
-        sum += x[i]
-    }
-    return (sum / n);
+for (let i = 0; i < clusters.length; i++){
+  //console.log(i);
+  for (let j = 0; j < clusters[i].length; j++){
+    //console.log(j);
+    silhouetteLabels[clusters[i][j]] = i;
+  }
 }
+let silhouetteScore = silhouette(dataArray, silhouetteLabels);
+console.log(`Sillhouette score: ${silhouetteScore}`);
+*/
 
-function rSquared(x: Array<number>, y: Array<number>): number {
-    //Calculates R^2 of x and y arrays from a simple linear regression.
-    if (x.length != y.length) {
-        throw new Error("Error: Array lengths do not match in rSquared()");
-    }
-    let resid: Array<number> = residuals(x, y)
-    let squared_resid_sum: number = 0;
-    let sum_of_squares_total: number = 0;
-    let y_mean: number = mean(y);
-    let i: number = 0;
-    const n: number = x.length;
-    for (i = 0; i < n; i++) {
-        squared_resid_sum += resid[i] ** 2;
-        sum_of_squares_total += (y[i] - y_mean) ** 2
-    }
-    return (squared_resid_sum / sum_of_squares_total);
+//Types
+type clusterObject = {
+    area: number,
+    centroid: Array<number>,
+    dataPoints: Array<Pair>,
+    density: number,
+    densityRank: number,
+    hasSignificantHole: boolean,
+    holes: Array<hole>,
+    hull: Array<coord>,
+    hullSimplified: Array<coord>,
+    id: number,
+    perimeter: number,
+    region: number,
+    regionDesc: string,
+    relations: Array<relation>,
+    shape: { description: string },
+    xMin: number,
+    xMax: number,
+    yMin: number,
+    yMax: number
 }
-
-
-function findHoles(cluster) {
-    //Returns a list of non-overlapping holes, sorted from largest to smallest.
-    let clusterData = coordinate(cluster.dataPoints);
-
-    var voronoi = new Voronoi();
-    var bbox = { xl: cluster.xMin - .1, xr: cluster.xMax + .1, yt: cluster.yMax + .1, yb: cluster.yMin - .1 }; // xl is x-left, xr is x-right, yt is y-top, and yb is y-bottom
-    var sites = clusterData;
-
-
-    var diagram = voronoi.compute(sites, bbox);
-    let shell = convexhull.makeHull(coordinate(clusterData))
-
-    let edgePoints = [];
-    let verticesInside = [];
-
-    for (let edge of diagram.edges) {
-        let va = [edge.va.x, edge.va.y];
-        let vb = [edge.vb.x, edge.vb.y];
-        let n = shell.length;
-        for (let i = 0; i < n; i++) {
-            let intersection = completeAngle(va, vb, shell[i % n], shell[(i + 1) % n])
-            if (((intersection[0] > va[0] && intersection[0] < vb[0]) || (intersection[0] < va[0] && intersection[0] > vb[0])) && ((intersection[1] > va[1] && intersection[1] < vb[1]) || (intersection[1] < va[1] && intersection[1] > vb[1]))) {
-                edgePoints.push(intersection);
-            }
-        }
-    }
-
-    for (point of deCoordinate(diagram.vertices)) {
-        if (classifyPoint(deCoordinate(shell), point) < 1) {
-            verticesInside.push(point);
-        }
-    }
-
-    for (point of edgePoints) {
-        if (classifyPoint(deCoordinate(shell), point) < 1) {
-            verticesInside.push(point);
-        }
-    }
-
-    let minsArray = [];
-    for (let vertexID in verticesInside) {
-        let vertex = verticesInside[vertexID];
-        let min = [0, 0];
-        for (let point of deCoordinate(clusterData)) {
-            if (min[1] == 0) {
-                min = [vertexID, euclidDistance(vertex, point)]
-            }
-            else if (min[1] > euclidDistance(vertex, point)) {
-                min = [vertexID, euclidDistance(vertex, point)]
-            }
-        }
-        minsArray.push(min);
-    }
-
-    let sorted = minsArray.sort((a, b) => { return b[1] - a[1] })
-
-    //Culls similar holes by removing hole centers that lie within the border of a larger hole.
-    for (let pointID in sorted) {
-        let point = sorted[pointID];
-        let i = Number(pointID) + 1;
-        while (i < sorted.length) {
-            if (euclidDistance(verticesInside[point[0]], verticesInside[sorted[i][0]]) < point[1]) {
-                sorted.splice(i, 1);
-                i--;
-            }
-            i++;
-        }
-    }
-
-
-    let closest = []
-    for (let i = 0; i < sorted.length; i++) {
-        closest.push([verticesInside[sorted[i][0]], sorted[i][1]])
-    }
-
-    return (closest);
-}
-
 type coord = {
     x: number,
     y: number
+}
+type relation = {
+    angle: number,
+    cardDirection: string,
+    distance: number,
+    id: number,
+    isNeighbor?: boolean
+    overlap?: number
+    sharedPts?: Array<Pair>
+    percentPtsShared?: number
+}
+type hole = [Array<number>, number, number]
+
+type LabelFactorPair = { label: any, factor: number }
+
+type Pair = [number, number]
+
+function getColumns(data: Array<any>, columnIds: Array<string>): Array<any> {
+    let columnData: Array<any> = []
+    for (let i = 0; i < data.length; i++) {
+        let entry: Array<any> = []
+        for (let j = 0; j < columnIds.length; j++) {
+            entry.push(data[i][columnIds[j]])
+        }
+        columnData.push(entry)
+    }
+    return columnData;
 }

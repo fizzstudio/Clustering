@@ -1,3 +1,4 @@
+/*
 import Voronoi from "./rhill-voronoi-core.js";
 import makeHull from "./convexhull.ts";
 import classifyPoint from "robust-point-in-polygon";
@@ -126,3 +127,4 @@ test = test.splice(0, test.length - 1);
 console.log(test);
 console.log(coordinate(test));
 console.log(shoelace(coordinate(test)));
+*/

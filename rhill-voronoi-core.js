@@ -1722,3 +1722,4 @@ Voronoi.prototype.compute = function(sites, bbox) {
 if ( typeof module !== 'undefined' ) {
     module.exports = Voronoi;
 }
+export default Voronoi;
