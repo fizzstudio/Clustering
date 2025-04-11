@@ -142,6 +142,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             centroid: [],
             dataPoints: [],
             dataPointIDs: [],
+            outlierIDs: [],
             density: 0,
             densityRank: 0,
             hasSignificantHole: false,
@@ -260,6 +261,10 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         */
         //console.log("-------------------------");
         i++;
+    }
+    //Adds noise point IDs to each cluster in masterArray
+    for (let pair of fizzscan.noiseAssigned){
+        masterArray[pair[1]].outlierIDs.push(pair[0])
     }
     //Adds density rankings for each cluster to masterArray
     const masterArrayClone: Array<clusterObject> = JSON.parse(JSON.stringify(masterArray));
@@ -1307,6 +1312,7 @@ type clusterObject = {
     centroid: Array<number>,
     dataPoints: Array<Pair>,
     dataPointIDs: Array<number>,
+    outlierIDs: Array<number>,
     density: number,
     densityRank: number,
     hasSignificantHole: boolean,
