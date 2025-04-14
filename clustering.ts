@@ -1,8 +1,8 @@
 //import { newPlot } from 'plotly.js-dist';
 //import csv2json from 'csvjson-csv2json';
 import classifyPoint from "./robust-point-in-polygon";
-import makeHull from "./convexhull.ts";
-import { FIZZSCAN } from "./FIZZSCAN.ts";
+import makeHull from "./convexhull";
+import { FIZZSCAN } from "./FIZZSCAN";
 import Voronoi from "./rhill-voronoi-core.js";
 import polygonClipping from 'polygon-clipping'
 
