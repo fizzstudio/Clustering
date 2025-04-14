@@ -1,4 +1,4 @@
 export {};
 declare module 'rhill-voronoi-core' {
-    export function Voronoi(): void;
+    export const Voronoi: void;
   }
