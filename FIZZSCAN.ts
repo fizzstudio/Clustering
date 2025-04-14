@@ -256,7 +256,6 @@ class FIZZSCAN {
    */
   _regionQuery(pointId: number): number[] {
     let neighbors: number[] = [];
-    let nnId: number = 0;
     let nnDist: number = 0;
     for (var id = 0; id < this._datasetLength; id++) {
       var dist = this.distance(this.dataset[pointId], this.dataset[id]);
@@ -265,11 +264,9 @@ class FIZZSCAN {
       }
       if (nnDist == 0) {
         nnDist = dist;
-        nnId = id;
       }
       else if (nnDist > dist) {
         nnDist = dist;
-        nnId = id;
       }
     }
 

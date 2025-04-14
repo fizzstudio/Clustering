@@ -1,5 +1,5 @@
 //import { newPlot } from 'plotly.js-dist';
-import csv2json from 'csvjson-csv2json';
+//import csv2json from 'csvjson-csv2json';
 import classifyPoint from "./robust-point-in-polygon";
 import makeHull from "./convexhull.ts";
 import { FIZZSCAN } from "./FIZZSCAN.ts";
@@ -23,9 +23,9 @@ let irisData = coordinate(getColumns(data, ["sepalLength", "petalLength"]));
 let labels = getColumns(data, ["variety"]);
 generateClusterAnalysis(irisData, true, labels);
 */
-import dataS1 from "./data/s1.ts";
-const data: coord[] = csv2json(dataS1) as coord[];
-generateClusterAnalysis(data, true);
+//import dataS1 from "./data/s1.ts";
+//const data: coord[] = csv2json(dataS1) as coord[];
+//generateClusterAnalysis(data, true);
 
 function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: any[]) {
     //data.sort();
@@ -75,7 +75,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, showForcing);
     let clusters = fizzscan.clusters
     let centroids = fizzscan.clusterCentroids;
-    let noise = fizzscan.noise;
+    //let noise = fizzscan.noise;
     if (labels != undefined) {
         clusters = [];
         for (let i = 0; i < uniqueLabels.length; i++) {
@@ -93,8 +93,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             }
             centroids.push(getCentroid(clusterData));
         }
-        noise = [];
-
+        //noise = [];
     }
 
 /*
@@ -949,9 +948,8 @@ function nNDistances(dataset: Array<Array<number>>, pointId: number): Array<numb
         const dist: number = euclidDistance(dataset[pointId], dataset[id]);
         distances.push(dist);
     }
-    let typedArray: Float32Array<ArrayBuffer> = Float32Array.from(distances)
-    typedArray.sort((a, b) => { return a - b; });
-    return Array.from(typedArray);
+    distances.sort((a: number, b: number) => { return a - b; });
+    return distances
 
 };
 
@@ -962,9 +960,8 @@ function nNDistancesSpecial(dataset: Array<Array<number>>, pointId: number, minP
         const dist = euclidDistance(dataset[pointId], dataset[id]);
         distances.push(dist);
     }
-    let typedArray = Float32Array.from(distances)
-    if (minPts < 100) return partialSort(typedArray, 2 * minPts);
-    else return Array.from(typedArray.sort((a, b) => { return a - b; }));
+    if (minPts < 100) return partialSort(distances, 2 * minPts);
+    else return Array.from(distances.sort((a, b) => { return a - b; }));
 };
 
 
@@ -984,7 +981,7 @@ function insort(items: Array<number>, x: number): void {
     items.splice(bisect(items, x), 0, x);
 }
 
-function partialSort(items: Float32Array, k: number): Array<number> {
+function partialSort(items: Array<number>, k: number): Array<number> {
     let smallest: Array<number> = [];
     for (let i = 0, len = items.length; i < len; ++i) {
         const item: number = items[i];
@@ -1349,7 +1346,7 @@ type hole = [Array<number>, number, number]
 type LabelFactorPair = { label: any, factor: number }
 
 type Pair = [number, number]
-
+/*
 function getColumns(data: Array<any>, columnIds: Array<string>): Array<any> {
     let columnData: Array<any> = []
     for (let i = 0; i < data.length; i++) {
@@ -1361,3 +1358,4 @@ function getColumns(data: Array<any>, columnIds: Array<string>): Array<any> {
     }
     return columnData;
 }
+*/
