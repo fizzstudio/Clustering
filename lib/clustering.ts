@@ -1,14 +1,13 @@
 //import { newPlot } from 'plotly.js-dist';
 //import csv2json from 'csvjson-csv2json';
-import classifyPoint from "./robust-point-in-polygon";
+import classifyPoint from "./robust-pnp";
 import makeHull from "./convexhull";
 import { FIZZSCAN } from "./FIZZSCAN";
-import Voronoi from "./rhill-voronoi-core.js";
+import Voronoi from "./rhill-voronoi-core";
 import polygonClipping from 'polygon-clipping'
 
-export default generateClusterAnalysis;
-export type { clusterObject }
-export type { coord }
+
+export {generateClusterAnalysis, type clusterObject, type coord}
 
 //import {dots} from "./data/datasaurus.ts";
 //const data = csv2json(dots);

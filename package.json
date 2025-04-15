@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && api-extractor run --local --verbose",
     "preview": "vite preview"
   },
   "devDependencies": {
@@ -13,7 +13,6 @@
     "vite": "^6.0.5"
   },
   "dependencies": {
-    "csvjson-csv2json": "^5.0.6",
     "polygon-clipping": "^0.15.7",
     "robust-point-in-polygon": "^1.0.3"
   }
