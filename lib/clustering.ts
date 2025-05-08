@@ -146,6 +146,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             hasSignificantHole: false,
             holes: [],
             hull: [],
+            hullIDs: [],
             hullSimplified: [],
             id: 0,
             perimeter: 0,
@@ -207,14 +208,20 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         const hull: Array<coord> = makeHull(coordinate(clusterData));
         clusterObject.hull = hull;
 
+        for (let point of hull){
+            const id = dataArray.findIndex((e) => {return e[0] == point.x && e[1] == point.y})
+            clusterObject.hullIDs.push(id);
+        }
+
+        const hullSimplified: Array<coord> = simplifyHull(hull);
+        clusterObject.hullSimplified = hullSimplified;
+
         const area: number = shoelace(hull);
         clusterObject.area = area;
 
         const peri: number = perimeter(hull)
         clusterObject.perimeter = peri;
 
-        const hullSimplified: Array<coord> = simplifyHull(hull);
-        clusterObject.hullSimplified = hullSimplified;
 
         const shape: { description: string } = judgeShape(clusterObject);
         clusterObject.shape = shape;
@@ -1314,6 +1321,7 @@ type clusterObject = {
     hasSignificantHole: boolean,
     holes: Array<hole>,
     hull: Array<coord>,
+    hullIDs: Array<number>,
     hullSimplified: Array<coord>,
     id: number,
     perimeter: number,
