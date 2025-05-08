@@ -16,6 +16,7 @@ export type clusterObject = {
     hasSignificantHole: boolean;
     holes: Array<hole>;
     hull: Array<coord>;
+    hullIDs: Array<number>;
     hullSimplified: Array<coord>;
     id: number;
     perimeter: number;
@@ -44,7 +45,7 @@ export function generateClusterAnalysis(data: coord[], showForcing: boolean, lab
 //
 // types/clustering.d.ts:6:5 - (ae-forgotten-export) The symbol "Pair" needs to be exported by the entry point index.d.ts
 // types/clustering.d.ts:12:5 - (ae-forgotten-export) The symbol "hole" needs to be exported by the entry point index.d.ts
-// types/clustering.d.ts:19:5 - (ae-forgotten-export) The symbol "relation" needs to be exported by the entry point index.d.ts
+// types/clustering.d.ts:20:5 - (ae-forgotten-export) The symbol "relation" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

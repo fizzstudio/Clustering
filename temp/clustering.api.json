@@ -264,7 +264,16 @@
             },
             {
               "kind": "Content",
-              "text": ">;\n    hullSimplified: "
+              "text": ">;\n    hullIDs: "
+            },
+            {
+              "kind": "Reference",
+              "text": "Array",
+              "canonicalReference": "!Array:interface"
+            },
+            {
+              "kind": "Content",
+              "text": "<number>;\n    hullSimplified: "
             },
             {
               "kind": "Reference",
@@ -312,7 +321,7 @@
           "name": "clusterObject",
           "typeTokenRange": {
             "startIndex": 1,
-            "endIndex": 28
+            "endIndex": 30
           }
         },
         {

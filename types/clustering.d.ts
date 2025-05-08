@@ -11,6 +11,7 @@ type clusterObject = {
     hasSignificantHole: boolean;
     holes: Array<hole>;
     hull: Array<coord>;
+    hullIDs: Array<number>;
     hullSimplified: Array<coord>;
     id: number;
     perimeter: number;
