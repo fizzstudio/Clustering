@@ -1,30 +1,11 @@
-//import { newPlot } from 'plotly.js-dist';
-//import csv2json from 'csvjson-csv2json';
 import classifyPoint from "./robust-pnp";
 import makeHull from "./convexhull";
 import { FIZZSCAN } from "./FIZZSCAN";
 import Voronoi from "./rhill-voronoi-core";
 import polygonClipping from 'polygon-clipping'
 
+export { generateClusterAnalysis, type clusterObject, type coord }
 
-export {generateClusterAnalysis, type clusterObject, type coord}
-
-//import {dots} from "./data/datasaurus.ts";
-//const data = csv2json(dots);
-//import data2d20c from "./data/2d-20c.ts";
-//const data = csv2json(data2d20c);
-//import dataS1 from "./data/s1.ts";
-//const data = csv2json(dataS1);
-/*
-import iris from "./data/iris.ts";
-const data = csv2json(iris);
-let irisData = coordinate(getColumns(data, ["sepalLength", "petalLength"]));
-let labels = getColumns(data, ["variety"]);
-generateClusterAnalysis(irisData, true, labels);
-*/
-//import dataS1 from "./data/s1.ts";
-//const data: coord[] = csv2json(dataS1) as coord[];
-//generateClusterAnalysis(data, true);
 
 function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: any[]) {
     //data.sort();
@@ -75,6 +56,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     let clusters = fizzscan.clusters
     let centroids = fizzscan.clusterCentroids;
     //let noise = fizzscan.noise;
+    let noiseAssigned = fizzscan.noiseAssigned
     if (labels != undefined) {
         clusters = [];
         for (let i = 0; i < uniqueLabels.length; i++) {
@@ -93,31 +75,12 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             centroids.push(getCentroid(clusterData));
         }
         //noise = [];
+        noiseAssigned = [];
     }
-
-/*
-    console.log(`Clusters:`)
-    console.log(clusters);
-    console.log(`Noise:`)
-    console.log(noise);
-    console.log(`NoiseAssigned:`)
-
-    console.log(fizzscan.noiseAssigned);
-
-    console.log(`Number of clusters: ${clusters.length}`)
-    console.log(`Total elements: ${clusters.flat().length + noise.length}`)
-    console.log(`Total clustered elements: ${clusters.flat().length}`)
-    console.log(`Total noise elements: ${noise.length}`)
-
-
-    console.log("-------------------------")
-    console.log("Individual Cluster Analysis")
-    console.log("-------------------------")
-*/
 
     const masterArray: Array<clusterObject> = [];
     //const palette: Array<string> = ["red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick",
-   //     "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
+    //     "lawngreen", "red", "orange", "yellow", "green", "blue", "cyan", "darkblue", "pink", "darkmagenta", "chocolate", "dodgerblue", "gold", "firebrick", "lawngreen"];
     const clusterRegions: Array<number> = getRegion(centroids);
     const clusterRegionsJudged: Array<string> = judgeRegion(clusterRegions);
     const xArray: Array<number> = [];
@@ -132,7 +95,6 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     const xMinGlobal: number = Math.min(...xArray);
     let i: number = 0;
 
-    //console.log(clusters);
     //Forms objects out of clusters, assigns properties, then adds them to a master array
     for (let cluster of clusters) {
         const clusterObject: clusterObject = {
@@ -169,6 +131,11 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         for (let point of cluster) {
             clusterData.push(dataArray[point]);
         }
+
+        if (labels) {
+            clusterObject.label = uniqueLabels[i]
+        }
+
         clusterObject.dataPoints = clusterData;
         clusterObject.dataPointIDs = cluster;
         let xMin: number = clusterData[0][0];
@@ -197,19 +164,16 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
 
         clusterObject.id = i;
-        //console.log(`This is cluster Number ${i}`)
 
         clusterObject.region = clusterRegions[i];
         clusterObject.regionDesc = clusterRegionsJudged[i];
-        //console.log(`This cluster is in the ${clusterRegionsJudged[i]} of the overall data.`);
-        //console.log(`This cluster is colored ${palette[i]}`);
 
 
         const hull: Array<coord> = makeHull(coordinate(clusterData));
         clusterObject.hull = hull;
 
-        for (let point of hull){
-            const id = dataArray.findIndex((e) => {return e[0] == point.x && e[1] == point.y})
+        for (let point of hull) {
+            const id = dataArray.findIndex((e) => { return e[0] == point.x && e[1] == point.y })
             clusterObject.hullIDs.push(id);
         }
 
@@ -258,17 +222,10 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
 
         masterArray.push(clusterObject);
-        //console.log(clusterObject);
-        /*
-        console.log(`The closest clusters are Cluster ${closest[1] + 1} (${Math.round(distances[1])} units away to the ${getAngle(1)}),
-          Cluster ${closest[2] + 1} (${Math.round(distances[2])} units away to the ${getAngle(2)}), 
-          and Cluster ${closest[3] + 1} (${Math.round(distances[3])} units away to the ${getAngle(3)})`)
-        */
-        //console.log("-------------------------");
         i++;
     }
     //Adds noise point IDs to each cluster in masterArray
-    for (let pair of fizzscan.noiseAssigned){
+    for (let pair of noiseAssigned) {
         masterArray[pair[1]].outlierIDs.push(pair[0])
     }
     //Adds density rankings for each cluster to masterArray
@@ -379,111 +336,6 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
 
 
-    //console.log(JSON.parse(JSON.stringify(masterArray)));
-    //console.log("stop");
-
-    /*
-    //Draws the main graph
-    const graphSize: number = 800;
-
-    let canvas: HTMLCanvasElement | null = document.getElementById("myCanvas") as HTMLCanvasElement | null;
-    if (canvas == null) {
-        throw new Error("Error: heatmap canvas element missing.")
-    }
-    else {
-        canvas = canvas as HTMLCanvasElement
-    }
-    const ctx: CanvasRenderingContext2D = canvas.getContext("2d") as CanvasRenderingContext2D;
-    canvas.height = graphSize;
-    canvas.width = graphSize;
-    ctx.transform(1, 0, 0, -1, 0, canvas.height)
-
-
-
-    //Draws clustered points and outliers
-    for (let i = 0; i < xArray.length - 1; i++) {
-        const x: number = ((xArray[i] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
-        const y: number = ((yArray[i] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
-
-        ctx.beginPath();
-        for (let j = 0; j < clusters.length; j++) {
-            if (clusters[j].includes(i)) {
-                ctx.fillStyle = palette[j];
-                ctx.ellipse(x, y, 3, 3, 0, 0, Math.PI * 2);
-                ctx.fill();
-            }
-        }
-
-        if (noise.includes(i)) {
-            ctx.fillStyle = "gray";
-            ctx.ellipse(x, y, 4, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-        }
-    }
-
-    //Draws centroids of each cluster
-
-
-    for (let i = 0; i < centroids.length; i++) {
-        const x: number = ((centroids[i][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
-        const y: number = ((centroids[i][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
-        ctx.beginPath();
-        ctx.fillStyle = palette[i];
-        ctx.ellipse(x, y, 5, 5, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.closePath();
-        ctx.beginPath();
-        ctx.fillStyle = "black";
-        ctx.ellipse(x, y, 6, 6, 0, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.closePath();
-    }
-
-    //Draws convex hulls around each cluster
-    for (let cluster of clusters) {
-        const clusterData: Array<Pair> = [];
-        for (let point of cluster) {
-            clusterData.push(dataArray[point]);
-        }
-        let shell = makeHull(coordinate(clusterData));
-        //shell = simplifyHull(shell);
-        ctx.beginPath();
-        ctx.moveTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)
-        for (let i = 0; i < shell.length; i++) {
-            const x: number = ((shell[i].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize;
-            const y: number = ((shell[i].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize;
-            ctx.lineTo(x, y);
-            ctx.stroke();
-        }
-        ctx.lineTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)
-        ctx.stroke();
-        ctx.closePath();
-
-    }
-
-    //Draws largest holes of each cluster
-    
-    for (let cluster of masterArray) {
-        for (let i = 0; i < 1; i++) {
-            ctx.beginPath();
-            ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
-                ((cluster.holes[i][0][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize,
-                ((cluster.holes[i][1]) / (xMaxGlobal - xMinGlobal)) * graphSize,
-                ((cluster.holes[i][1]) / (yMaxGlobal - yMinGlobal)) * graphSize, 0, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.closePath();
-            ctx.beginPath();
-            ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
-                ((cluster.holes[i][0][1] - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize, 4, 4, 0, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.closePath();
-        }
-    }
-   
-
-    const precision: number = 20;
-    generateHeatmap(dataArray, precision);
- */
     function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
         //Judges the 'shape' of the convex hull of a cluster of data.
         const data = cluster.dataPoints
@@ -648,86 +500,6 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
 
 //Helper functions
-/*
-function generateHeatmap(dataArray: Array<Array<number>>, precision: number): void {
-
-    const y: Array<number> = [];
-    const x: Array<number> = [];
-
-    for (let point of dataArray) {
-        x.push(point[0]);
-        y.push(point[1]);
-    }
-
-
-    let yMax: number = Math.max(...y) + 1;
-    let xMax: number = Math.max(...x) + 1;
-    let yMin: number = Math.min(...y) - 1;
-    let xMin: number = Math.min(...x) - 1;
-
-    const grid: Array<Array<number>> = [];
-
-    for (let i = 0; i < precision; i++) {
-        grid.push([]);
-        for (let j = 0; j < precision; j++) {
-            grid[i].push(0);
-        }
-    }
-
-    for (let point of dataArray) {
-        const xIndex: number = Math.floor((point[0] - xMin) * precision / (xMax - xMin));
-        const yIndex: number = Math.floor((point[1] - yMin) * precision / (yMax - yMin));
-        grid[yIndex][xIndex]++;
-    }
-
-
-
-    const heatmapData = [
-        {
-            z: grid,
-            type: 'heatmap'
-        }
-    ];
-
-    const heatmapData2 = [
-        {
-            z: grid,
-            colorscale: [
-                ['0.0', 'rgb(255,255,255)'],
-                ['0.111111111111', 'rgb(191,191,191)'],
-                ['0.222222222222', 'rgb(170,170,170)'],
-                ['0.333333333333', 'rgb(149,149,149)'],
-                ['0.444444444444', 'rgb(128,128,128)'],
-                ['0.555555555556', 'rgb(106,106,106)'],
-                ['0.666666666667', 'rgb(85,85,85)'],
-                ['0.777777777778', 'rgb(64,64,64)'],
-                ['0.888888888889', 'rgb(43,43,43)'],
-                ['1.0', 'rgb(21,21,21)']
-            ],
-            type: 'heatmap'
-        }
-    ];
-
-
-    const HEATMAP1 = document.getElementById('heatmap1');
-
-    newPlot(HEATMAP1, heatmapData);
-
-    const HEATMAP2 = document.getElementById('heatmap2');
-
-    newPlot(HEATMAP2, heatmapData2);
-
-    const TESTER2 = document.getElementById('tester2');
-    const trace1 = [{
-        x: x,
-        y: y,
-        mode: 'markers',
-        type: 'scatter'
-    }];
-
-    newPlot(TESTER2, trace1)
-}
-*/
 
 function simplifyHull(inputShell: Array<coord>): Array<coord> {
     const shell: Array<Pair> = deCoordinate(inputShell);
@@ -1324,6 +1096,7 @@ type clusterObject = {
     hullIDs: Array<number>,
     hullSimplified: Array<coord>,
     id: number,
+    label?: string,
     perimeter: number,
     region: number,
     regionDesc: string,
@@ -1353,16 +1126,3 @@ type hole = [Array<number>, number, number]
 type LabelFactorPair = { label: any, factor: number }
 
 type Pair = [number, number]
-/*
-function getColumns(data: Array<any>, columnIds: Array<string>): Array<any> {
-    let columnData: Array<any> = []
-    for (let i = 0; i < data.length; i++) {
-        let entry: Array<any> = []
-        for (let j = 0; j < columnIds.length; j++) {
-            entry.push(data[i][columnIds[j]])
-        }
-        columnData.push(entry)
-    }
-    return columnData;
-}
-*/
