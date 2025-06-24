@@ -26,7 +26,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             labelPairs.push({ label: uniqueLabels[i], factor: i })
         }
         for (let i = 0; i < labels.length; i++) {
-            factorizedLabels.push(uniqueLabels.indexOf(labels[i][0]));
+            factorizedLabels.push(uniqueLabels.indexOf(labels[i]));
         }
     }
     const minPts: number = 4;
