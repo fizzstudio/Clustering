@@ -30,7 +30,14 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         }
     }
     const minPts: number = 4;
-
+    console.log("labels")
+    console.log(labels)
+    console.log("labelPairs")
+    console.log(labelPairs)
+    console.log("uniqueLabels")
+    console.log(uniqueLabels)
+    console.log("factorizedLabels")
+    console.log(factorizedLabels)
     const dataArray: Array<Pair> = [];
     for (let i = 0; i < dataLength; i++) {
         dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
