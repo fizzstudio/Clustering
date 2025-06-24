@@ -291,7 +291,7 @@
             },
             {
               "kind": "Content",
-              "text": ">;\n    id: number;\n    perimeter: number;\n    region: number;\n    regionDesc: string;\n    relations: "
+              "text": ">;\n    id: number;\n    label?: string;\n    perimeter: number;\n    region: number;\n    regionDesc: string;\n    relations: "
             },
             {
               "kind": "Reference",

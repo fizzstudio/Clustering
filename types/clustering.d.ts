@@ -14,6 +14,7 @@ type clusterObject = {
     hullIDs: Array<number>;
     hullSimplified: Array<coord>;
     id: number;
+    label?: string;
     perimeter: number;
     region: number;
     regionDesc: string;
