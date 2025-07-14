@@ -30,6 +30,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         }
     }
     const minPts: number = 4;
+    const epsilonParameter = 2;
     const dataArray: Array<Pair> = [];
     for (let i = 0; i < dataLength; i++) {
         dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
@@ -50,8 +51,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         }
         distAvg.push(sum / dataLength);
     }
-
-    const fizzscan = new FIZZSCAN(dataArray, 2 * distAvg[minPts], minPts, showForcing);
+    const fizzscan = new FIZZSCAN(dataArray, epsilonParameter * distAvg[minPts], minPts, showForcing);
     let clusters = fizzscan.clusters
     let centroids = fizzscan.clusterCentroids;
     //let noise = fizzscan.noise;
@@ -101,6 +101,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             centroid: [],
             dataPoints: [],
             dataPointIDs: [],
+            outliers: [],
             outlierIDs: [],
             density: 0,
             densityRank: 0,
@@ -225,6 +226,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
     //Adds noise point IDs to each cluster in masterArray
     for (let pair of noiseAssigned) {
+        masterArray[pair[1]].outliers.push(dataArray[pair[0]])
         masterArray[pair[1]].outlierIDs.push(pair[0])
     }
     //Adds density rankings for each cluster to masterArray
@@ -1086,6 +1088,7 @@ type clusterObject = {
     centroid: Array<number>,
     dataPoints: Array<Pair>,
     dataPointIDs: Array<number>,
+    outliers: Array<Pair>,
     outlierIDs: Array<number>,
     density: number,
     densityRank: number,

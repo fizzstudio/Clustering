@@ -98,8 +98,8 @@ class FIZZSCAN {
     }
 
     //Declusters extremely small clusters in large datasets into noise.   
-    if (this.dataset.length > 1000) {
-      var t = this.minPts * 2;
+    //if (this.dataset.length > 1000) {
+      var t = Math.log(this.dataset.length)
       for (var clusterId = 0; clusterId < this.clusters.length; clusterId++) {
         var tempCluster = this.clusters[clusterId];
         if (tempCluster.length < t) {
@@ -110,7 +110,7 @@ class FIZZSCAN {
         }
       }
       this.clusters = this.clusters.filter((e) => e.length > 0);
-    }
+    //}
     //Forms centroids of each generated cluster
     for (var i = 0; i < this.clusters.length; i++) {
       this.clusterCentroids.push(this._centroid(this.clusters[i]));
@@ -341,9 +341,9 @@ class FIZZSCAN {
     var nearest: number[] = [0, 0];
     for (var id of datasetIds) {
       if (nearest[1] == 0) {
-        nearest = [id, this._euclideanDistance(this.dataset[pointId], this.dataset[id])];
+        nearest = [id, this.distance(this.dataset[pointId], this.dataset[id])];
       }
-      let distance = this._euclideanDistance(this.dataset[pointId], this.dataset[id]);
+      let distance = this.distance(this.dataset[pointId], this.dataset[id]);
       if (nearest[1] > distance) {
         nearest = [id, distance];
       }

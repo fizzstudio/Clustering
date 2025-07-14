@@ -14,8 +14,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@types/papaparse": "^5.3.16",
     "typescript": "~5.6.2",
-    "vite": "^6.0.5"
+    "vite": "^6.0.5",
+    "papaparse": "^5.5.3"
   },
   "dependencies": {
     "polygon-clipping": "^0.15.7",
