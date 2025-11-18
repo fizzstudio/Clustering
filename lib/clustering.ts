@@ -301,11 +301,11 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
 
     //Calculates overlap between clusters and adds to masterArray
-    for (let clusterId in masterArray) {
+    for (let clusterId = 0; clusterId < masterArray.length; clusterId++) {
         let cluster: clusterObject = masterArray[clusterId];
-        for (let targetId in masterArray) {
+        for (let targetId = 0; targetId < masterArray.length; targetId++) {
             let pointer = 0;
-            for (let relationID in masterArray[clusterId].relations) {
+            for (let relationID = 0; relationID < masterArray[clusterId].relations.length; relationID++) {
                 let relation = masterArray[clusterId].relations[relationID]
                 if (relation.id == Number(targetId)) {
                     pointer = Number(relationID)
@@ -660,7 +660,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
 
     let minsArray: Array<Array<number>> = [];
 
-    for (let vertexID in verticesInside) {
+    for (let vertexID = 0; vertexID < verticesInside.length; vertexID++) {
         let vertex: Array<number> = verticesInside[vertexID];
         let min: Array<number> = [Number(vertexID), euclidDistance(vertex, deCoordinate(clusterData)[0])];
         for (let point of deCoordinate(clusterData)) {
@@ -674,7 +674,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
     let sorted: Array<Array<number>> = minsArray.sort((a: number[], b: number[]) => { return b[1] - a[1] })
 
     //Culls similar holes by removing hole centers that lie within the border of a larger hole.
-    for (let pointID in sorted) {
+    for (let pointID = 0; pointID <  sorted.length; pointID++) {
         const point: Array<number> = sorted[pointID];
         let i: number = Number(pointID) + 1;
         while (i < sorted.length) {
