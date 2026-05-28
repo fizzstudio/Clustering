@@ -1,7 +1,7 @@
 /**
  * Convex hull using Andrew's monotone chain algorithm.
  *
- * Implemented as described in de Berg, Cheong, van Kreveld, and Overmars,
+ * Implemented according to: de Berg, Cheong, van Kreveld, and Overmars,
  * Computational Geometry: Algorithms and Applications, 3rd ed., Sec. 1.1.
  */
 
@@ -48,26 +48,26 @@ function buildChain(points: Point[]): Point[] {
 /**
  * Computes the convex hull of a planar point set.
  */
-export function convexHull(P: Point[]): Point[] {
-  const sorted = [...P].sort((a, b) => (a.x - b.x) || (a.y - b.y));
+export function convexHull(points: Point[]): Point[] {
+  const sorted = [...points].sort((a, b) => (a.x - b.x) || (a.y - b.y));
 
   // Exact duplicates add no information to the hull.
-  const points: Point[] = [];
+  const uniquePoints: Point[] = [];
   for (const p of sorted) {
-    const last = points[points.length - 1];
+    const last = uniquePoints[uniquePoints.length - 1];
     if (!last || last.x !== p.x || last.y !== p.y) {
-      points.push(p);
+      uniquePoints.push(p);
     }
   }
 
-  const n = points.length;
+  const n = uniquePoints.length;
   if (n < 3) {
-    return points;
+    return uniquePoints;
   }
 
-  const upper = buildChain(points);
+  const upper = buildChain(uniquePoints);
 
-  const lower = buildChain([...points].reverse());
+  const lower = buildChain([...uniquePoints].reverse());
 
   lower.pop();
   lower.shift();

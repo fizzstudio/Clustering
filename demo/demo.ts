@@ -1,7 +1,7 @@
 //import { newPlot } from 'plotly.js-dist';
 //import csv2json from 'csvjson-csv2json';
 import classifyPoint from "../lib/robust-pnp";
-import makeHull from "../lib/convexhull";
+import { convexHull } from "../lib/convexhull";
 import { FIZZSCAN } from "../lib/FIZZSCAN";
 import Voronoi from "../lib/rhill-voronoi-core";
 import polygonClipping from 'polygon-clipping'
@@ -163,7 +163,7 @@ for (let i = 0; i < output.length; i++) {
 
 //Draws convex hulls around each cluster
 for (let cluster of output) {
-    let shell = makeHull(coordinate(cluster.dataPoints));
+    let shell = convexHull(coordinate(cluster.dataPoints));
     //shell = simplifyHull(shell);
     ctx.beginPath();
     ctx.moveTo(((shell[0].x - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize, ((shell[0].y - yMinGlobal) / (yMaxGlobal - yMinGlobal)) * graphSize)

@@ -1,5 +1,5 @@
 import classifyPoint from "./robust-pnp";
-import makeHull from "./convexhull";
+import { convexHull } from "./convexhull";
 import { FIZZSCAN } from "./FIZZSCAN";
 import Voronoi from "./rhill-voronoi-core";
 import polygonClipping from 'polygon-clipping'
@@ -169,7 +169,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         clusterObject.regionDesc = clusterRegionsJudged[i];
 
 
-        const hull: Array<coord> = makeHull(coordinate(clusterData));
+        const hull: Array<coord> = convexHull(coordinate(clusterData));
         clusterObject.hull = hull;
 
         for (let point of hull) {
@@ -340,7 +340,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
         //Judges the 'shape' of the convex hull of a cluster of data.
         const data = cluster.dataPoints
-        const h: Array<coord> = makeHull(coordinate(data));
+        const h: Array<coord> = convexHull(coordinate(data));
         const flat: number = flatness(h);
         if (flat > .92) {
             //High flatness is categorized as roughly circular
@@ -623,7 +623,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
     const bbox = { xl: cluster.xMin, xr: cluster.xMax, yt: cluster.yMin, yb: cluster.yMax };
 
     const diagram = voronoi.compute(clusterData, bbox);
-    const shell: Array<coord> = makeHull(clusterData)
+    const shell: Array<coord> = convexHull(clusterData)
 
     const edgePoints: Array<Array<number>> = [];
     const verticesInside: Array<Array<number>> = [];
