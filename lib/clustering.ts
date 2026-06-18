@@ -1,8 +1,8 @@
-import classifyPoint from "./robust-pnp";
+//import classifyPoint from "./robust-pnp";
 import makeHull from "./convexhull";
 import { FIZZSCAN } from "./FIZZSCAN";
-import Voronoi from "./rhill-voronoi-core";
-import polygonClipping from 'polygon-clipping'
+//import Voronoi from "./rhill-voronoi-core";
+//import polygonClipping from 'polygon-clipping'
 
 export { generateClusterAnalysis, type clusterObject, type coord }
 
@@ -209,7 +209,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             })
         }
 
-        clusterObject.holes = findHoles(clusterObject);
+        //clusterObject.holes = findHoles(clusterObject);
 
         const holeParameter = .2;
         const largestHoleImportanceScore = clusterObject.holes[0][2]
@@ -301,6 +301,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
 
     //Calculates overlap between clusters and adds to masterArray
+    /*
     for (let clusterId = 0; clusterId < masterArray.length; clusterId++) {
         let cluster: clusterObject = masterArray[clusterId];
         for (let targetId = 0; targetId < masterArray.length; targetId++) {
@@ -335,7 +336,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
             }
         }
     }
-
+*/
 
     function judgeShape(cluster: clusterObject): { description: string, radius?: number, averageSideLength?: number, slope?: number } {
         //Judges the 'shape' of the convex hull of a cluster of data.
@@ -571,7 +572,7 @@ function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3:
     const newPoint: Pair = [x, slope12 * x + p1[1] - slope12 * p1[0]];
     return newPoint;
 }
-
+/*
 function checkParallel(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): boolean {
     //Subfunction of completeAngle that is also useful to have as it's own function
     //Checks if the lines spanning p1-p2 and p3-p4 are parallel
@@ -595,7 +596,7 @@ function checkParallel(p1: coord | Array<number>, p2: coord | Array<number>, p3:
         return false;
     }
 }
-
+*/
 function lin_reg(x: Array<number>, y: Array<number>): Array<number> {
     //Get slope and intercept from x and y arrays.  
     const n: number = x.length;
@@ -615,7 +616,7 @@ function lin_reg(x: Array<number>, y: Array<number>): Array<number> {
     const intercept: number = (y_sum / n) - slope * (x_sum / n);
     return [intercept, slope];
 }
-
+/*
 function findHoles(cluster: clusterObject): Array<hole> {
     //Returns a list of non-overlapping holes, sorted from most to least significant.
     const clusterData: Array<coord> = coordinate(cluster.dataPoints);
@@ -708,7 +709,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
     }
     return (closest.sort((a: hole, b: hole) => { return b[2] - a[2] }));
 }
-
+*/
 function euclidDistance(p: Array<number>, q: Array<number>): number {
     //Returns euclidean distance between vectors p and q.
     let sum: number = 0;
