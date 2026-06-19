@@ -5,6 +5,8 @@
  * @copyright MIT
  */
 
+import KDBush from "kdbush";
+
 
 /**
  * FIZZSCAN class construcotr
@@ -29,7 +31,8 @@ class FIZZSCAN {
   _visited: Array<number>;
   _assigned: Array<number>;
   _datasetLength: number;
-  constructor(dataset: Array<Array<number>>, epsilon: number, minPts: number, forceIn: boolean, distanceFunction?: (p: any, q: any) => number) {
+  tree!: KDBush;
+  constructor(dataset: Array<Array<number>>, epsilon: number, minPts: number, forceIn: boolean, tree: KDBush, distanceFunction?: (p: any, q: any) => number) {
     /** @type {Array} */
     this.dataset = dataset;
     /** @type {number} */
@@ -58,7 +61,7 @@ class FIZZSCAN {
     this._assigned = [];
     /** @type {number} */
     this._datasetLength = dataset.length;
-
+    this.tree = tree
     this.run(dataset, epsilon, minPts, forceIn, distanceFunction);
   }
   /******************************************************************************/
@@ -128,8 +131,9 @@ class FIZZSCAN {
 
 
     let tempStorage: number[][] = [];
+    const alreadyClusterd = this.clusters.flat();
     for (let noisePointID of this.noise) {
-      let nearestNeighbor: number = this._nearestAssignedNeighbor(this.clusters.flat(), noisePointID);
+      const nearestNeighbor: number = this._nearestAssignedNeighbor(alreadyClusterd, noisePointID);
       tempStorage.push([noisePointID, Number(reverseClusterLookup[nearestNeighbor])]);
     }
 
@@ -255,22 +259,9 @@ class FIZZSCAN {
    * @access protected
    */
   _regionQuery(pointId: number): number[] {
-    let neighbors: number[] = [];
-    let nnDist: number = 0;
-    for (var id = 0; id < this._datasetLength; id++) {
-      var dist = this.distance(this.dataset[pointId], this.dataset[id]);
-      if (dist < this.epsilon) {
-        neighbors.push(id);
-      }
-      if (nnDist == 0) {
-        nnDist = dist;
-      }
-      else if (nnDist > dist) {
-        nnDist = dist;
-      }
-    }
-
-    return neighbors;
+    const targetPoint = this.dataset[pointId];
+    const nnTree = this.tree.within(targetPoint[0], targetPoint[1], this.epsilon);
+    return nnTree;
   }
   /******************************************************************************/
   // helpers
@@ -338,6 +329,14 @@ class FIZZSCAN {
  * @access protected
  */
   _nearestAssignedNeighbor(datasetIds: number[], pointId: number): number {
+    const treeNeighbors = this.tree.within(this.dataset[pointId][0], this.dataset[pointId][1], 2 * this.epsilon);
+    if (treeNeighbors.length > 0) {
+      for (let neighbor of treeNeighbors) {
+        if (datasetIds.includes(neighbor)) {
+          return neighbor;
+        }
+      }
+    }
     var nearest: number[] = [0, 0];
     for (var id of datasetIds) {
       if (nearest[1] == 0) {

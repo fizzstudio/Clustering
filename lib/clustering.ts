@@ -3,6 +3,8 @@ import makeHull from "./convexhull";
 import { FIZZSCAN } from "./FIZZSCAN";
 import Voronoi from "./rhill-voronoi-core";
 import polygonClipping from 'polygon-clipping'
+import KDBush from "kdbush";
+import Flatbush from "flatbush";
 
 export { generateClusterAnalysis, type clusterObject, type coord }
 
@@ -33,25 +35,30 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     const epsilonParameter = 2;
     const dataArray: Array<Pair> = [];
     for (let i = 0; i < dataLength; i++) {
-        dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])])
+        dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])]);
     }
+    const kdBush = new KDBush(dataArray.length);
+    const flatBush = new Flatbush(dataArray.length);
+    for (let point of dataArray) {
+        kdBush.add(point[0], point[1]);
+        flatBush.add(point[0], point[1]);
+    }
+    kdBush.finish();
+    flatBush.finish();
 
-    //distAvg averges out the nearest neighbor distances over each point in the set
-    const distAvg: Array<number> = [];
     const distanceStorage: Array<Array<number>> = [];
 
     for (let i = 0; i < dataLength; i++) {
-        distanceStorage.push(nNDistancesSpecial(dataArray, i, minPts))
+        const flatTest = flatBush.neighbors(dataArray[i][0], dataArray[i][1], minPts * 2)
+        distanceStorage.push(flatTest.map(j => euclidDistance(dataArray[i], dataArray[j])))
     }
-
+    let sum = 0;
     for (let i = 0; i < dataLength; i++) {
-        let sum: number = 0;
-        for (let j = 0; j < dataLength; j++) {
-            sum += distanceStorage[j][i];
-        }
-        distAvg.push(sum / dataLength);
+        sum += distanceStorage[i][minPts]
     }
-    const fizzscan = new FIZZSCAN(dataArray, epsilonParameter * distAvg[minPts], minPts, showForcing);
+    sum /= dataLength;
+
+    const fizzscan = new FIZZSCAN(dataArray, epsilonParameter * sum, minPts, showForcing, kdBush);
     let clusters = fizzscan.clusters
     let centroids = fizzscan.clusterCentroids;
     //let noise = fizzscan.noise;
@@ -230,20 +237,13 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         masterArray[pair[1]].outlierIDs.push(pair[0])
     }
     //Adds density rankings for each cluster to masterArray
-    const masterArrayClone: Array<clusterObject> = JSON.parse(JSON.stringify(masterArray));
-    const densitySorted: Array<clusterObject> = masterArrayClone.sort((a, b) => {
-        return a.density - b.density;
-    })
-
-    const densityIDs: Array<number> = [];
-    for (let cluster of densitySorted) {
-        densityIDs.push(cluster.id);
-    }
+    const densityRanking = masterArray
+        .map((c, i) => ({ id: c.id, density: c.density, i }))
+        .sort((a, b) => a.density - b.density)
+        .map(c => c.id);
     for (let cluster of masterArray) {
-        cluster.densityRank = densityIDs.indexOf(cluster.id);
+        cluster.densityRank = densityRanking.indexOf(cluster.id);
     }
-
-
 
     //Designates "neighbors" of each cluster and adds to masterArray
     i = 0;
@@ -624,7 +624,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
 
     const diagram = voronoi.compute(clusterData, bbox);
     const shell: Array<coord> = makeHull(clusterData)
-
+    const shellDecoord = deCoordinate(shell);
     const edgePoints: Array<Array<number>> = [];
     const verticesInside: Array<Array<number>> = [];
 
@@ -645,15 +645,15 @@ function findHoles(cluster: clusterObject): Array<hole> {
     }
 
     const epsilon: number = 10 ** (Math.log10(Math.max((cluster.xMax - cluster.xMin), (cluster.yMax - cluster.yMin))) - 4)
-
-    for (let point of deCoordinate(diagram.vertices)) {
-        if (classifyPoint(deCoordinate(shell), point, epsilon) < 1) {
+    const verticesDecoord = deCoordinate(diagram.vertices)
+    for (let point of verticesDecoord) {
+        if (classifyPoint(shellDecoord, point, epsilon) < 1) {
             verticesInside.push(point);
         }
     }
 
     for (let point of edgePoints) {
-        if (classifyPoint(deCoordinate(shell), point, epsilon) < 1) {
+        if (classifyPoint(shellDecoord, point, epsilon) < 1) {
             verticesInside.push(point);
         }
     }
@@ -662,10 +662,11 @@ function findHoles(cluster: clusterObject): Array<hole> {
 
     for (let vertexID = 0; vertexID < verticesInside.length; vertexID++) {
         let vertex: Array<number> = verticesInside[vertexID];
-        let min: Array<number> = [Number(vertexID), euclidDistance(vertex, deCoordinate(clusterData)[0])];
-        for (let point of deCoordinate(clusterData)) {
-            if (min[1] > euclidDistance(vertex, point)) {
-                min = [Number(vertexID), euclidDistance(vertex, point)]
+        let min: Array<number> = [Number(vertexID), euclidDistance(vertex, cluster.dataPoints[0])];
+        for (let point of cluster.dataPoints) {
+            const dist = euclidDistance(vertex, point);
+            if (min[1] > dist) {
+                min = [Number(vertexID), dist];
             }
         }
         minsArray.push(min);
@@ -674,7 +675,7 @@ function findHoles(cluster: clusterObject): Array<hole> {
     let sorted: Array<Array<number>> = minsArray.sort((a: number[], b: number[]) => { return b[1] - a[1] })
 
     //Culls similar holes by removing hole centers that lie within the border of a larger hole.
-    for (let pointID = 0; pointID <  sorted.length; pointID++) {
+    for (let pointID = 0; pointID < sorted.length; pointID++) {
         const point: Array<number> = sorted[pointID];
         let i: number = Number(pointID) + 1;
         while (i < sorted.length) {
@@ -731,7 +732,7 @@ function nNDistances(dataset: Array<Array<number>>, pointId: number): Array<numb
     return distances
 
 };
-
+/*
 function nNDistancesSpecial(dataset: Array<Array<number>>, pointId: number, minPts: number): Array<number> {
     //Returns list of distances from nearest neighbors for a point, sorted low to high.
     const distances: Array<number> = [];
@@ -742,7 +743,6 @@ function nNDistancesSpecial(dataset: Array<Array<number>>, pointId: number, minP
     if (minPts < 100) return partialSort(distances, 2 * minPts);
     else return Array.from(distances.sort((a, b) => { return a - b; }));
 };
-
 
 function bisect(items: Array<number>, x: number, lo?: number, hi?: number): number {
     let mid: number;
@@ -773,6 +773,7 @@ function partialSort(items: Array<number>, k: number): Array<number> {
     return smallest;
 }
 
+*/
 function nNIndices(dataset: Array<Array<number>>, pointId: number): Array<number> {
     //Returns list of nearest indices to a point, sorted low to high, including the point itself.
     let distances: Array<Array<number>> = [];
