@@ -1,10 +1,6 @@
 //import { newPlot } from 'plotly.js-dist';
 //import csv2json from 'csvjson-csv2json';
-import classifyPoint from "../lib/robust-pnp";
 import makeHull from "../lib/convexhull";
-import { FIZZSCAN } from "../lib/FIZZSCAN";
-import Voronoi from "../lib/rhill-voronoi-core";
-import polygonClipping from 'polygon-clipping'
 import Papa from 'papaparse';
 import { generateClusterAnalysis } from '../lib/clustering.ts'
 import dataS1 from "../data/s1";
@@ -181,6 +177,9 @@ for (let cluster of output) {
 //Draws largest holes of each cluster
 
 for (let cluster of output) {
+    if (!cluster.holes || cluster.holes.length == 0){
+        break;
+    }
     for (let i = 0; i < 1; i++) {
         ctx.beginPath();
         ctx.ellipse(((cluster.holes[i][0][0] - xMinGlobal) / (xMaxGlobal - xMinGlobal)) * graphSize,
