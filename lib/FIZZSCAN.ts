@@ -5,7 +5,8 @@
  * @copyright MIT
  */
 
-import KDBush from "kdbush";
+import KDBush from "./KDBush";
+
 
 
 /**

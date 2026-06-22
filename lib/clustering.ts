@@ -3,8 +3,8 @@ import makeHull from "./convexhull";
 import { FIZZSCAN } from "./FIZZSCAN";
 import Voronoi from "./rhill-voronoi-core";
 import polygonClipping from 'polygon-clipping'
-import KDBush from "kdbush";
-import Flatbush from "flatbush";
+import KDBush from "./KDBush";
+import Flatbush from "./FlatBush";
 
 export { generateClusterAnalysis, type clusterObject, type coord }
 
@@ -37,8 +37,8 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     for (let i = 0; i < dataLength; i++) {
         dataArray.push([Number(data[i]["x"]), Number(data[i]["y"])]);
     }
-    const kdBush = new KDBush(dataArray.length);
-    const flatBush = new Flatbush(dataArray.length);
+    const kdBush = new KDBush(dataArray.length, undefined, undefined, undefined, undefined);
+    const flatBush = new Flatbush(dataArray.length, undefined, undefined, undefined, undefined);
     for (let point of dataArray) {
         kdBush.add(point[0], point[1]);
         flatBush.add(point[0], point[1]);
@@ -49,7 +49,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     const distanceStorage: Array<Array<number>> = [];
 
     for (let i = 0; i < dataLength; i++) {
-        const flatTest = flatBush.neighbors(dataArray[i][0], dataArray[i][1], minPts * 2)
+        const flatTest = flatBush.neighbors(dataArray[i][0], dataArray[i][1], minPts * 2, undefined, undefined)
         distanceStorage.push(flatTest.map(j => euclidDistance(dataArray[i], dataArray[j])))
     }
     let sum = 0;

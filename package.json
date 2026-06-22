@@ -20,8 +20,6 @@
     "vite": "^6.0.5"
   },
   "dependencies": {
-    "flatbush": "^4.6.2",
-    "kdbush": "^4.1.0",
     "polygon-clipping": "^0.15.7",
     "robust-point-in-polygon": "^1.0.3"
   }
