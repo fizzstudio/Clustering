@@ -132,9 +132,9 @@ class FIZZSCAN {
 
 
     let tempStorage: number[][] = [];
-    const alreadyClusterd = this.clusters.flat();
+    const alreadyClustered = this.clusters.flat();
     for (let noisePointID of this.noise) {
-      const nearestNeighbor: number = this._nearestAssignedNeighbor(alreadyClusterd, noisePointID);
+      const nearestNeighbor: number = this._nearestAssignedNeighbor(alreadyClustered, noisePointID);
       tempStorage.push([noisePointID, Number(reverseClusterLookup[nearestNeighbor])]);
     }
 
