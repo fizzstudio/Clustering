@@ -45,16 +45,16 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
     kdBush.finish();
     flatBush.finish();
-
+    const coordToIndex = new Map<string, number>()
     const distanceStorage: Array<Array<number>> = [];
-
-    for (let i = 0; i < dataLength; i++) {
-        const flatTest = flatBush.neighbors(dataArray[i][0], dataArray[i][1], minPts * 2, undefined, undefined)
-        distanceStorage.push(flatTest.map(j => euclidDistance(dataArray[i], dataArray[j])))
-    }
     let sum = 0;
     for (let i = 0; i < dataLength; i++) {
-        sum += distanceStorage[i][minPts]
+        const x = dataArray[i][0];
+        const y = dataArray[i][1];
+        const flatTest = flatBush.neighbors(x, y, minPts * 2, undefined, undefined);
+        distanceStorage.push(flatTest.map(j => euclidDistance(dataArray[i], dataArray[j])));
+        sum += distanceStorage[i][minPts];
+        coordToIndex.set(`${x},${y}`, i);
     }
     sum /= dataLength;
 
@@ -180,7 +180,11 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         clusterObject.hull = hull;
 
         for (let point of hull) {
-            const id = dataArray.findIndex((e) => { return e[0] == point.x && e[1] == point.y })
+            //const id = dataArray.findIndex((e) => { return e[0] == point.x && e[1] == point.y })
+            let id = coordToIndex.get(`${point.x},${point.y}`)
+            if (!id) {
+                id = -1;
+            }
             clusterObject.hullIDs.push(id);
         }
 
