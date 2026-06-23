@@ -11,21 +11,21 @@ export { generateClusterAnalysis, type clusterObject, type coord }
 
 function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: any[]) {
     //data.sort();
-    const dataLength: number = data.length
+    const dataLength: number = data.length;
 
     if (dataLength == 0) {
-        throw new Error("Error: Given data has zero length")
+        throw new Error("Error: Given data has zero length");
     }
     const factorizedLabels: any[] = [];
-    let labelPairs: Array<LabelFactorPair> = []
-    let uniqueLabels: Array<any> = []
+    let labelPairs: Array<LabelFactorPair> = [];
+    let uniqueLabels: Array<any> = [];
     if (labels != undefined) {
         if (dataLength != labels.length) {
-            throw new Error("Error: Given labels do not match length of data")
+            throw new Error("Error: Given labels do not match length of data");
         }
         uniqueLabels = [...new Set(labels.flat())]
         for (let i = 0; i < uniqueLabels.length; i++) {
-            labelPairs.push({ label: uniqueLabels[i], factor: i })
+            labelPairs.push({ label: uniqueLabels[i], factor: i });
         }
         for (let i = 0; i < labels.length; i++) {
             factorizedLabels.push(uniqueLabels.indexOf(labels[i]));
@@ -46,15 +46,16 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     kdBush.finish();
     flatBush.finish();
 
+    const coordToIndex = new Map<string, number>()
     const distanceStorage: Array<Array<number>> = [];
-
-    for (let i = 0; i < dataLength; i++) {
-        const flatTest = flatBush.neighbors(dataArray[i][0], dataArray[i][1], minPts * 2, undefined, undefined)
-        distanceStorage.push(flatTest.map(j => euclidDistance(dataArray[i], dataArray[j])))
-    }
     let sum = 0;
     for (let i = 0; i < dataLength; i++) {
-        sum += distanceStorage[i][minPts]
+        const x = dataArray[i][0];
+        const y = dataArray[i][1];
+        const flatTest = flatBush.neighbors(x, y, minPts * 2, undefined, undefined);
+        distanceStorage.push(flatTest.map(j => euclidDistance(dataArray[i], dataArray[j])));
+        sum += distanceStorage[i][minPts];
+        coordToIndex.set(`${x},${y}`, i);
     }
     sum /= dataLength;
 
@@ -180,7 +181,11 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         clusterObject.hull = hull;
 
         for (let point of hull) {
-            const id = dataArray.findIndex((e) => { return e[0] == point.x && e[1] == point.y })
+            //const id = dataArray.findIndex((e) => { return e[0] == point.x && e[1] == point.y })
+            let id = coordToIndex.get(`${point.x},${point.y}`)
+            if (!id) {
+                id = -1;
+            }
             clusterObject.hullIDs.push(id);
         }
 
@@ -203,7 +208,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
         clusterObject.relations = [];
         const closest: Array<number> = nNIndices(centroids, i);
-        const distances: Array<number> = nNDistances(centroids, i)
+        const distances: Array<number> = nNDistances(centroids, i);
 
         for (let j = 0; j < clusters.length; j++) {
             const angle: number = getAngle(centroids[i], centroids[closest[j]]);
@@ -219,7 +224,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         clusterObject.holes = findHoles(clusterObject);
 
         const holeParameter = .2;
-        const largestHoleImportanceScore = clusterObject.holes[0][2]
+        const largestHoleImportanceScore = clusterObject.holes[0][2];
         if (largestHoleImportanceScore > holeParameter) {
             clusterObject.hasSignificantHole = true;
         }
@@ -233,8 +238,8 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
     }
     //Adds noise point IDs to each cluster in masterArray
     for (let pair of noiseAssigned) {
-        masterArray[pair[1]].outliers.push(dataArray[pair[0]])
-        masterArray[pair[1]].outlierIDs.push(pair[0])
+        masterArray[pair[1]].outliers.push(dataArray[pair[0]]);
+        masterArray[pair[1]].outlierIDs.push(pair[0]);
     }
     //Adds density rankings for each cluster to masterArray
     const densityRanking = masterArray
@@ -247,7 +252,7 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
 
     //Designates "neighbors" of each cluster and adds to masterArray
     i = 0;
-    const neighborParameter: number = 1.2
+    const neighborParameter: number = 1.2;
     for (let cluster of centroids) {
         let j: number = 0;
         for (let target of centroids) {
@@ -305,32 +310,32 @@ function generateClusterAnalysis(data: coord[], showForcing: boolean, labels?: a
         let cluster: clusterObject = masterArray[clusterId];
         for (let targetId = 0; targetId < masterArray.length; targetId++) {
             let pointer = 0;
-            for (let relationID = 0; relationID < masterArray[clusterId].relations.length; relationID++) {
-                let relation = masterArray[clusterId].relations[relationID]
+            for (let relationID = 0; relationID < cluster.relations.length; relationID++) {
+                let relation = cluster.relations[relationID]
                 if (relation.id == Number(targetId)) {
                     pointer = Number(relationID)
                 }
             }
             if (clusterId == targetId) {
-                masterArray[clusterId].relations[pointer].overlap = 1;
+                cluster.relations[pointer].overlap = 1;
             }
             else {
-                let target: clusterObject = masterArray[targetId];
-                let overlap = polygonClipping.intersection([deCoordinate(cluster.hull)], [deCoordinate(target.hull)]) as unknown as Array<Array<Array<Pair>>>;
+                const target: clusterObject = masterArray[targetId];
+                const overlap = polygonClipping.intersection([deCoordinate(cluster.hull)], [deCoordinate(target.hull)]) as unknown as Array<Array<Array<Pair>>>;
                 if (overlap.length > 0) {
                     let overlapPercentage = shoelace(coordinate(overlap[0][0])) / cluster.area;
-                    masterArray[clusterId].relations[pointer].overlap = overlapPercentage;
-                    masterArray[clusterId].relations[pointer].sharedPts = []
+                    cluster.relations[pointer].overlap = overlapPercentage;
+                    cluster.relations[pointer].sharedPts = [];
                     for (let point of cluster.dataPoints) {
                         let epsilon = 10 ** (Math.log10(Math.max((cluster.xMax - cluster.xMin), (cluster.yMax - cluster.yMin))) - 4)
                         if (classifyPoint(deCoordinate(target.hull), point, epsilon) < 1) {
-                            masterArray[clusterId].relations[pointer].sharedPts!.push(point);
+                            cluster.relations[pointer].sharedPts!.push(point);
                         }
                     }
-                    masterArray[clusterId].relations[pointer].percentPtsShared = masterArray[clusterId].relations[pointer].sharedPts!.length / masterArray[clusterId].dataPoints.length
+                    cluster.relations[pointer].percentPtsShared = cluster.relations[pointer].sharedPts!.length / cluster.dataPoints.length;
                 }
                 else {
-                    masterArray[clusterId].relations[pointer].overlap = 0;
+                    cluster.relations[pointer].overlap = 0;
                 }
             }
         }
@@ -519,7 +524,7 @@ function simplifyHull(inputShell: Array<coord>): Array<coord> {
     }
 
     //'Fills in' small edges near corners
-    const smallnessParameter = 20
+    const smallnessParameter = 20;
     const peri: number = perimeter(inputShell);
     for (let i = 0; i < n; i++) {
         if (euclidDistance(shell[(i + 1) % n], shell[(i + 2) % n]) < (peri / smallnessParameter)) {
@@ -575,10 +580,10 @@ function completeAngle(p1: coord | Array<number>, p2: coord | Array<number>, p3:
 function checkParallel(p1: coord | Array<number>, p2: coord | Array<number>, p3: coord | Array<number>, p4: coord | Array<number>): boolean {
     //Subfunction of completeAngle that is also useful to have as it's own function
     //Checks if the lines spanning p1-p2 and p3-p4 are parallel
-    if (!Array.isArray(p1)) { p1 = [p1.x, p1.y] }
-    if (!Array.isArray(p2)) { p2 = [p2.x, p2.y] }
-    if (!Array.isArray(p3)) { p3 = [p3.x, p3.y] }
-    if (!Array.isArray(p4)) { p4 = [p4.x, p4.y] }
+    if (!Array.isArray(p1)) { p1 = [p1.x, p1.y] };
+    if (!Array.isArray(p2)) { p2 = [p2.x, p2.y] };
+    if (!Array.isArray(p3)) { p3 = [p3.x, p3.y] };
+    if (!Array.isArray(p4)) { p4 = [p4.x, p4.y] };
 
     if ((p2[0] - p1[0]) == 0) {
         if ((p4[0] - p3[0]) == 0) {
@@ -659,8 +664,8 @@ function findHoles(cluster: clusterObject): Array<hole> {
     }
 
     let minsArray: Array<Array<number>> = [];
-
-    for (let vertexID = 0; vertexID < verticesInside.length; vertexID++) {
+    const verticesInsideLength = verticesInside.length;
+    for (let vertexID = 0; vertexID < verticesInsideLength; vertexID++) {
         let vertex: Array<number> = verticesInside[vertexID];
         let min: Array<number> = [Number(vertexID), euclidDistance(vertex, cluster.dataPoints[0])];
         for (let point of cluster.dataPoints) {
@@ -700,7 +705,8 @@ function findHoles(cluster: clusterObject): Array<hole> {
     }
 
     const closest: Array<hole> = []
-    for (let i = 0; i < sorted.length; i++) {
+    const sortedLength = sorted.length
+    for (let i = 0; i < sortedLength; i++) {
         const testHole: hole = [verticesInside[sorted[i][0]], sorted[i][1], 0]
         const centroidDistance = euclidDistance(testHole[0], cluster.centroid)
         const importanceScore = testHole[1] / avgDistance * (1 - centroidDistance / maxDistance)
