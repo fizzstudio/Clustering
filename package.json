@@ -11,7 +11,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && api-extractor run --local --verbose",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "pubalpha": "npm version prerelease --preid alpha && npm publish --tag alpha",
+    "pubpatch": "npm version patch && npm publish",
+    "pubminor": "npm version minor && npm publish",
+    "pubmajor": "npm version major && npm publish"
   },
   "devDependencies": {
     "@types/papaparse": "^5.3.16",
