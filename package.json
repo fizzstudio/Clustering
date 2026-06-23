@@ -5,6 +5,19 @@
   "files": [
     "dist"
   ],
+  "license": "AGPL-3.0-or-later",
+  "publishConfig": {
+    "access": "restricted",
+    "registry": "https://npm.fizz.studio"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fizzstudio/clustering.git"
+  },
+  "bugs": {
+    "url": "https://github.com/fizzstudio/clustering/issues"
+  },
+  "homepage": "https://github.com/fizzstudio/clustering#readme",
   "type": "module",
   "exports": "./dist/clustering.js",
   "types": "./dist/clustering.d.ts",
