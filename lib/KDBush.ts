@@ -100,7 +100,7 @@ export default class KDBush {
 
         if (data) { // reconstruct an index from a buffer
             this.data = data;
-            // @ts-expect-error TS can't handle SharedArrayBuffer overloads
+            // @ts-ignore
             this.ids = new this.IndexArrayType(data, HEADER_SIZE, numItems);
             this.coords = new ArrayType(data, HEADER_SIZE + idsByteSize + padCoords, numItems * 2);
             this._pos = numItems * 2;
@@ -108,7 +108,7 @@ export default class KDBush {
 
         } else { // initialize a new index
             const data = this.data = new ArrayBufferType(HEADER_SIZE + coordsByteSize + idsByteSize + padCoords);
-            // @ts-expect-error TS can't handle SharedArrayBuffer overloads
+            // @ts-ignore
             this.ids = new this.IndexArrayType(data, HEADER_SIZE, numItems);
             this.coords = new ArrayType(data, HEADER_SIZE + idsByteSize + padCoords, numItems * 2);
             this._pos = 0;
